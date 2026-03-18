@@ -23,6 +23,12 @@ const ProductSchema = new mongoose.Schema({
     trim: true,
     maxlength: 200,
   },
+  sku: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+  },
   slug: {
     type: String,
     required: true,
@@ -63,6 +69,27 @@ ProductSchema.index({ name: 'text', tags: 'text', description: 'text' });
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ createdAt: -1 });
 ProductSchema.index({ slug: 1 });
+
+// Strict Database-Level Validation: Ensure variant SKUs are strictly unique globally
+ProductSchema.pre('validate', async function () {
+  if (this.variants && this.variants.length > 0) {
+    const skus = this.variants.map((v) => v.sku);
+    // 1. Check for duplicates within its own variants
+    if (new Set(skus).size !== skus.length) {
+      throw new Error('Duplicate SKUs found within this product\'s variants.');
+    }
+    
+    // 2. Check for collisions against all other existing products in the DB
+    const existingProduct = await mongoose.models.Product.findOne({
+      _id: { $ne: this._id || null },
+      'variants.sku': { $in: skus }
+    });
+    
+    if (existingProduct) {
+      throw new Error(`Validation Failed: One or more variant SKUs already belong to an existing product (ID: ${existingProduct._id})`);
+    }
+  }
+});
 
 // Auto-set basePrice from variants before save
 ProductSchema.pre('save', function (next) {
