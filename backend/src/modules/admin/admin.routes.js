@@ -7,6 +7,9 @@ const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const { protect } = require('../../middleware/auth.middleware');
 const { authorize } = require('../../middleware/rbac.middleware');
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
 
 router.get('/dashboard', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const [
@@ -53,6 +56,39 @@ router.post('/create-admin', protect, authorize('masteradmin'), asyncHandler(asy
   });
 
   sendSuccess(res, { _id: newAdmin._id, email: newAdmin.email }, 'Admin account created successfully', 201);
+}));
+
+router.get('/logs', protect, authorize('masteradmin'), asyncHandler(async (req, res) => {
+  const type = req.query.type === 'error' ? 'error.log' : 'combined.log';
+  const limit = parseInt(req.query.limit, 10) || 200;
+  
+  // Navigate from backend/src/modules/admin to backend/logs
+  const logPath = path.join(__dirname, '../../../../logs', type);
+
+  if (!fs.existsSync(logPath)) {
+    return sendSuccess(res, [], 'No logs recorded yet');
+  }
+
+  const logs = [];
+  const rl = readline.createInterface({
+    input: fs.createReadStream(logPath),
+    crlfDelay: Infinity
+  });
+
+  for await (const line of rl) {
+    if (line.trim()) {
+      try {
+        logs.push(JSON.parse(line));
+      } catch (err) {
+        logs.push({ level: 'unknown', message: line, timestamp: new Date().toISOString() });
+      }
+    }
+  }
+
+  // Return the most recent N logs (reverse chronological order)
+  const recentLogs = logs.slice(-limit).reverse();
+  
+  sendSuccess(res, recentLogs, 'System logs streamed successfully');
 }));
 
 module.exports = router;

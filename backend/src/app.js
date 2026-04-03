@@ -7,6 +7,9 @@ const cookieParser = require('cookie-parser');
 const { apiLimiter } = require('./middleware/rateLimit.middleware');
 const errorHandler = require('./middleware/errorHandler.middleware');
 const logger = require('./utils/logger');
+const passport = require('passport');
+
+require('./config/passport'); // Initialize strategies
 
 const app = express();
 
@@ -20,8 +23,19 @@ app.use(helmet({
 // ==========================
 //  CORS
 // ==========================
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, Postman, mobile apps)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -35,6 +49,7 @@ app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+app.use(passport.initialize());
 
 // ==========================
 //  Sanitization
@@ -56,6 +71,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISO
 //  API Routes
 // ==========================
 app.use('/api/v1/auth',       require('./modules/auth/auth.routes'));
+app.use('/api/v1/users',      require('./modules/users/user.routes'));
 app.use('/api/v1/products',   require('./modules/products/product.routes'));
 app.use('/api/v1/categories', require('./modules/categories/categories.routes'));
 app.use('/api/v1/cart',       require('./modules/cart/cart.routes'));

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { HelmetProvider } from 'react-helmet-async';
 
@@ -12,6 +13,7 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import CartDrawer from './features/cart/CartDrawer';
 import AdminLayout from './components/layout/AdminLayout';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
 // Lazy-loaded pages
@@ -23,6 +25,9 @@ const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
+const AdminOrdersPageAdmin = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminCustomersPage = lazy(() => import('./pages/admin/AdminCustomersPage'));
+const AdminLogsPage      = lazy(() => import('./pages/admin/AdminLogsPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const LoginPage    = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
@@ -75,7 +80,7 @@ const PageFallback = () => (
 const AppLayout = ({ children, noLayout }) => (
   <>
     {!noLayout && <Navbar />}
-    <main style={{ minHeight: noLayout ? 'unset' : '80vh' }}>{children}</main>
+    <main style={{ minHeight: noLayout ? 'unset' : '80vh', paddingTop: noLayout ? 0 : '72px' }}>{children}</main>
     {!noLayout && <Footer />}
     <CartDrawer />
   </>
@@ -87,9 +92,32 @@ function AppRoutes() {
   // Listen for auth:logout event from Axios interceptor
   const { logout } = useAuthStore();
   useEffect(() => {
-    const handler = () => logout();
-    window.addEventListener('auth:logout', handler);
-    return () => window.removeEventListener('auth:logout', handler);
+    const handleLogout = () => logout();
+    window.addEventListener('auth:logout', handleLogout);
+
+    // ── Global JS error + unhandled promise rejection toasts ──
+    const handleUnhandledRejection = (event) => {
+      const msg = event.reason?.message || 'An unexpected error occurred';
+      // Don't re-toast errors already handled by axios interceptor
+      if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('401')) return;
+      toast.error(`⚠️ ${msg}`, { id: 'unhandled-rejection', duration: 5000 });
+    };
+    const handleGlobalError = (event) => {
+      // Ignore ResizeObserver loop warnings (browser noise)
+      if (event.message?.includes('ResizeObserver')) return;
+      toast.error(`⚠️ ${event.message || 'An unexpected error occurred'}`, {
+        id: 'global-error', duration: 5000,
+      });
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleGlobalError);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleGlobalError);
+    };
   }, [logout]);
 
   return (
@@ -157,6 +185,15 @@ function AppRoutes() {
           <Route path="/admin/products" element={
             <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminProductsPage /></PageTransition></AdminLayout></ProtectedRoute>
           } />
+          <Route path="/admin/orders" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminOrdersPageAdmin /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
+          <Route path="/admin/customers" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminCustomersPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
+          <Route path="/admin/logs" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminLogsPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
 
           {/* 404 */}
           <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />
@@ -171,7 +208,9 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
           <Toaster
             position="bottom-right"
             toastOptions={{

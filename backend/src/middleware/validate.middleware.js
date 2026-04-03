@@ -7,10 +7,13 @@ const AppError = require('../utils/AppError');
 const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);
   if (!result.success) {
-    const errors = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`);
-    return next(new AppError(`Validation failed: ${errors.join('; ')}`, 400));
+    // Zod v3 uses .errors, Zod v4 uses .issues — handle both safely
+    const issues = result.error?.errors || result.error?.issues || [];
+    const errors = issues.map((e) => `${(e.path || []).join('.')}: ${e.message}`);
+    const message = errors.length > 0 ? `Validation failed: ${errors.join('; ')}` : 'Validation failed';
+    return next(new AppError(message, 400));
   }
-  req.body = result.data; // use cleaned/coerced data
+  req.body = result.data;
   next();
 };
 

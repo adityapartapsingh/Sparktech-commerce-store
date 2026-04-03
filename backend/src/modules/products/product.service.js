@@ -70,7 +70,8 @@ exports.getProduct = async (slug) => {
     if (cached) return JSON.parse(cached);
   }
 
-  const product = await ProductRepo.findOne({ slug, isActive: true });
+  // Accept both slug (e.g. "arduino-uno") and MongoDB ObjectId
+  const product = await ProductRepo.findByIdOrSlug(slug);
   if (!product) throw new AppError('Product not found', 404);
 
   if (redis) await redis.set(cacheKey, JSON.stringify(product), 'EX', CACHE_TTL * 2);

@@ -9,7 +9,9 @@ const AppError = require('../../utils/AppError');
 
 // Customer: get own orders
 router.get('/my', protect, asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const orders = await Order.find({ user: req.user._id })
+    .populate('user', 'name email')
+    .sort({ createdAt: -1 });
   sendSuccess(res, orders, 'Orders fetched');
 }));
 
@@ -24,7 +26,7 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
 }));
 
 // Admin: list all orders
-router.get('/', protect, authorize('admin'), asyncHandler(async (req, res) => {
+router.get('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Number(req.query.limit) || 20;
   const skip = (page - 1) * limit;
@@ -38,15 +40,97 @@ router.get('/', protect, authorize('admin'), asyncHandler(async (req, res) => {
 }));
 
 // Admin: update order status
-router.patch('/:id/status', protect, authorize('admin'), asyncHandler(async (req, res) => {
+router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const { status, trackingNumber } = req.body;
   const order = await Order.findByIdAndUpdate(
     req.params.id,
     { status, ...(trackingNumber && { trackingNumber }) },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!order) throw new AppError('Order not found', 404);
   sendSuccess(res, order, 'Order status updated');
 }));
 
+// Customer: cancel order (only before shipping)
+router.post('/:id/cancel', protect, asyncHandler(async (req, res) => {
+  const { reason, comment } = req.body;
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new AppError('Order not found', 404);
+  if (order.user.toString() !== req.user._id.toString()) throw new AppError('Not authorized', 403);
+
+  const cancellable = ['pending', 'paid', 'processing'];
+  if (!cancellable.includes(order.status)) {
+    throw new AppError(
+      order.status === 'shipped' || order.status === 'delivered'
+        ? 'Order has already been shipped. Please raise a return request instead.'
+        : 'This order cannot be cancelled.',
+      400
+    );
+  }
+
+  order.status = 'cancelled';
+  order.cancellationReason = reason ? (comment ? `${reason} — ${comment}` : reason) : 'No reason provided';
+  order.cancelledAt = new Date();
+  await order.save();
+  sendSuccess(res, { orderId: order._id }, 'Order cancelled successfully');
+}));
+
+// Customer: request return / replacement
+router.post('/:id/return', protect, asyncHandler(async (req, res) => {
+  const { type, reason, description, itemsAffected, preferredResolution, contactPhone, bankAccount } = req.body;
+  if (!reason) throw new AppError('Reason is required', 400);
+  if (!description || description.length < 20) throw new AppError('Please provide at least 20 characters describing the issue', 400);
+
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new AppError('Order not found', 404);
+  if (order.user.toString() !== req.user._id.toString()) throw new AppError('Not authorized', 403);
+  if (order.status !== 'delivered') throw new AppError('Only delivered orders can be returned or replaced', 400);
+  if (order.returnRequest?.status && !['rejected'].includes(order.returnRequest.status)) {
+    throw new AppError('A return/replacement request is already open for this order', 400);
+  }
+
+  order.returnRequest = {
+    type:               type || 'return',
+    reason,
+    description,
+    itemsAffected:      itemsAffected || [],
+    preferredResolution:preferredResolution || '',
+    contactPhone:       contactPhone || '',
+    bankAccount:        bankAccount || '',
+    status:             'pending',
+    requestedAt:        new Date(),
+  };
+  await order.save();
+  sendSuccess(res, { orderId: order._id }, 'Return/replacement request submitted. Our team will contact you within 24 hours.');
+}));
+
+// Admin: update delivery info
+router.put('/:id/delivery', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
+  const { provider, trackingUrl, trackingNumber } = req.body;
+  
+  const updateData = {
+    'deliveryInfo.provider': provider,
+    'deliveryInfo.trackingUrl': trackingUrl,
+    trackingNumber: trackingNumber,
+    status: 'shipped',
+  };
+  
+  // If not previously dispatched, set dispatchedAt
+  const order = await Order.findById(req.params.id);
+  if (!order) throw new AppError('Order not found', 404);
+  
+  if (!order.deliveryInfo?.dispatchedAt) {
+    updateData['deliveryInfo.dispatchedAt'] = new Date();
+  }
+
+  const updatedOrder = await Order.findByIdAndUpdate(
+    req.params.id,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  sendSuccess(res, updatedOrder, 'Delivery information updated successfully');
+}));
+
 module.exports = router;
+

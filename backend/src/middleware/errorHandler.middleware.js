@@ -24,8 +24,13 @@ const errorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
+  // Normalize message — SDK errors (e.g. Razorpay) throw plain objects, not Error instances
+  const message = err.message
+    || err.error?.description
+    || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+
   logger.error({
-    message: err.message,
+    message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     url: req.originalUrl,
     method: req.method,

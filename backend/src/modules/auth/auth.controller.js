@@ -1,15 +1,30 @@
 const asyncHandler = require('../../utils/asyncHandler');
+const AppError = require('../../utils/AppError');
 const { sendSuccess } = require('../../utils/apiResponse');
 const AuthService = require('./auth.service');
 
 exports.register = asyncHandler(async (req, res) => {
-  const user = await AuthService.register(req.body, res);
-  sendSuccess(res, user, 'Registration successful', 201);
+  const result = await AuthService.register(req.body, res);
+  // Returns HTTP 202 Accepted because the creation is pending verification
+  sendSuccess(res, result, 'Verification required', 202);
+});
+
+exports.verifyOtp = asyncHandler(async (req, res) => {
+  const user = await AuthService.verifyOtp(req.body, res);
+  sendSuccess(res, user, 'Account verified and logged in successfully', 200);
 });
 
 exports.login = asyncHandler(async (req, res) => {
   const user = await AuthService.login(req.body, res);
   sendSuccess(res, user, 'Login successful');
+});
+
+exports.oauthCallback = asyncHandler(async (req, res) => {
+  if (!req.user) throw new AppError('OAuth authentication failed', 401);
+  await AuthService.oauthLogin(req.user, res);
+  // Redirect to frontend — use FRONTEND_URL (CRA runs on 3000, Vite on 5173)
+  const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+  res.redirect(frontendUrl);
 });
 
 exports.logout = asyncHandler(async (req, res) => {

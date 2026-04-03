@@ -28,7 +28,6 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
     minlength: 8,
     select: false,
   },
@@ -38,7 +37,12 @@ const UserSchema = new mongoose.Schema({
     default: 'customer',
   },
   avatar: String,
-  phone: String,
+  phone: {
+    type: String,
+    unique: true,
+    sparse: true, // Only enforces uniqueness if a string exists
+    match: [/^\d{10,15}$/, 'Please enter a valid numeric phone number'],
+  },
   addresses: [AddressSchema],
   cart: [{
     product:  { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
@@ -47,7 +51,24 @@ const UserSchema = new mongoose.Schema({
   }],
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   refreshToken: { type: String, select: false },
+  
+  // Advanced Auth Fields
   isEmailVerified: { type: Boolean, default: false },
+  isPhoneVerified: { type: Boolean, default: false },
+  
+  authProvider: {
+    type: String,
+    enum: ['local', 'google', 'github'],
+    default: 'local'
+  },
+  providerId: { type: String, select: false },
+  
+  emailOtp: { type: String, select: false },
+  emailOtpExpires: { type: Date, select: false },
+  
+  phoneOtp: { type: String, select: false },
+  phoneOtpExpires: { type: Date, select: false },
+
   resetPasswordToken: String,
   resetPasswordExpires: Date,
 }, { timestamps: true });

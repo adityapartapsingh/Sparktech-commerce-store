@@ -24,42 +24,90 @@ const getRazorpay = () => {
   return _razorpay;
 };
 
+// ─── Delivery Calc Helper ───────────────────────────────────────────────────
+const calculateDelivery = (subtotal) => {
+  const fee = subtotal >= 500 ? 0 : 50;
+  const estimatedDelivery = new Date();
+  estimatedDelivery.setDate(estimatedDelivery.getDate() + 5); // Base 5 day ETA
+  return { fee, estimatedDelivery };
+};
+
 // ─── Step 1: Create Razorpay Order ──────────────────────────────────────────
 // Frontend calls this first to get an order_id, then opens the Razorpay modal.
 router.post('/create-order', protect, asyncHandler(async (req, res) => {
-  const { shippingAddress } = req.body;
+  const { shippingAddress, cartItems } = req.body;
   const user = await User.findById(req.user._id).populate('cart.product');
 
-  if (!user?.cart?.length) throw new AppError('Your cart is empty', 400);
+  // Use DB cart if populated, otherwise fall back to cartItems sent from frontend (Zustand store)
+  const cartSource = user?.cart?.length ? 'db' : 'frontend';
 
-  // Build items and validate stock
+  if (cartSource === 'frontend' && (!cartItems || !cartItems.length)) {
+    throw new AppError('Your cart is empty', 400);
+  }
+
   const orderItems = [];
   let totalAmount = 0;
 
-  for (const item of user.cart) {
-    const product = item.product;
-    if (!product || !product.isActive) {
-      throw new AppError(`${product?.name || 'A product'} is no longer available`, 400);
+  if (cartSource === 'db') {
+    // Validate from DB cart (with full product data)
+    for (const item of user.cart) {
+      const product = item.product;
+      if (!product || !product.isActive) {
+        throw new AppError(`${product?.name || 'A product'} is no longer available`, 400);
+      }
+      const variant = product.variants.id(item.variant);
+      if (!variant) throw new AppError('Product variant not found', 404);
+      if (variant.stock < item.quantity) {
+        throw new AppError(`Only ${variant.stock} of ${product.name} (${variant.label}) in stock`, 400);
+      }
+      const lineTotal = variant.price * item.quantity;
+      totalAmount += lineTotal;
+      orderItems.push({
+        product:      product._id,
+        variant:      item.variant,
+        name:         product.name,
+        variantLabel: variant.label,
+        image:        product.images?.[0],
+        price:        variant.price,
+        quantity:     item.quantity,
+      });
     }
-    const variant = product.variants.id(item.variant);
-    if (!variant) throw new AppError('Product variant not found', 404);
-    if (variant.stock < item.quantity) {
-      throw new AppError(`Only ${variant.stock} of ${product.name} (${variant.label}) in stock`, 400);
+  } else {
+    // Use cartItems from frontend (Zustand store) — trust the data but validate stock
+    for (const item of cartItems) {
+      const product = await Product.findById(item.productId);
+      if (!product || !product.isActive) {
+        throw new AppError(`${item.name || 'A product'} is no longer available`, 400);
+      }
+      const variant = product.variants.id(item.variantId);
+      if (!variant) throw new AppError(`Variant not found for ${item.name}`, 404);
+      if (variant.stock < item.quantity) {
+        throw new AppError(`Only ${variant.stock} of ${product.name} (${variant.label}) in stock`, 400);
+      }
+      const lineTotal = variant.price * item.quantity;
+      totalAmount += lineTotal;
+      orderItems.push({
+        product:      product._id,
+        variant:      variant._id,
+        name:         product.name,
+        variantLabel: variant.label,
+        image:        product.images?.[0],
+        price:        variant.price,
+        quantity:     item.quantity,
+      });
     }
 
-    const lineTotal = variant.price * item.quantity;
-    totalAmount += lineTotal;
-
-    orderItems.push({
-      product:      product._id,
-      variant:      item.variant,
-      name:         product.name,
-      variantLabel: variant.label,
-      image:        product.images?.[0],
-      price:        variant.price,
-      quantity:     item.quantity,
+    // Sync to DB cart for consistency
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: {
+        cart: cartItems.map(i => ({ product: i.productId, variant: i.variantId, quantity: i.quantity }))
+      }
     });
   }
+
+  // Calculate Delivery Fee & Estimate
+  const { fee: deliveryFee, estimatedDelivery } = calculateDelivery(totalAmount);
+  totalAmount += deliveryFee;
 
   // Create a pending order in our DB first
   const dbOrder = await Order.create({
@@ -68,29 +116,41 @@ router.post('/create-order', protect, asyncHandler(async (req, res) => {
     totalAmount,
     shippingAddress,
     status:          'pending',
-    razorpayOrderId: 'temp',           // placeholder; replaced below
+    razorpayOrderId: 'temp',
+    deliveryInfo: {
+      fee: deliveryFee,
+      estimatedDelivery,
+    }
   });
 
   // Create Razorpay order (amount in paise)
-  const rzpOrder = await getRazorpay().orders.create({
-    amount:          Math.round(totalAmount * 100),
-    currency:        'INR',
-    receipt:         dbOrder._id.toString(),
-    notes: {
-      dbOrderId: dbOrder._id.toString(),
-      userId:    req.user._id.toString(),
-    },
-  });
+  // Razorpay SDK throws plain objects (not Errors) on failure, so we wrap the call
+  let rzpOrder;
+  try {
+    rzpOrder = await getRazorpay().orders.create({
+      amount:   Math.round(totalAmount * 100),
+      currency: 'INR',
+      receipt:  dbOrder._id.toString(),
+      notes: {
+        dbOrderId: dbOrder._id.toString(),
+        userId:    req.user._id.toString(),
+      },
+    });
+  } catch (rzpErr) {
+    // Clean up the pending DB order so it doesn't linger
+    await Order.findByIdAndDelete(dbOrder._id);
+    const msg = rzpErr?.error?.description || rzpErr?.message || 'Razorpay order creation failed';
+    throw new AppError(msg, rzpErr?.statusCode || 502);
+  }
 
-  // Attach Razorpay order ID to our DB order
   await Order.findByIdAndUpdate(dbOrder._id, { razorpayOrderId: rzpOrder.id });
 
   sendSuccess(res, {
-    orderId:       dbOrder._id,
+    orderId:         dbOrder._id,
     razorpayOrderId: rzpOrder.id,
-    amount:        rzpOrder.amount,
-    currency:      rzpOrder.currency,
-    keyId:         process.env.RAZORPAY_KEY_ID,
+    amount:          rzpOrder.amount,
+    currency:        rzpOrder.currency,
+    keyId:           process.env.RAZORPAY_KEY_ID,
   }, 'Razorpay order created');
 }));
 
@@ -120,6 +180,8 @@ router.post('/verify', protect, asyncHandler(async (req, res) => {
   await Order.findByIdAndUpdate(dbOrderId, {
     status:            'paid',
     razorpayPaymentId: razorpay_payment_id,
+    'paymentInfo.method': 'razorpay',
+    'paymentInfo.status': 'paid',
   });
 
   // Reduce stock and clear cart in parallel
@@ -143,7 +205,84 @@ router.post('/verify', protect, asyncHandler(async (req, res) => {
   sendSuccess(res, { orderId: order._id }, 'Payment verified and order confirmed');
 }));
 
-// ─── Step 3: Razorpay Webhook (optional — for server-side event handling) ──────
+
+// ─── COD: Place order without online payment ─────────────────────────────────
+router.post('/cod', protect, asyncHandler(async (req, res) => {
+  const { shippingAddress, cartItems } = req.body;
+  const user = await User.findById(req.user._id).populate('cart.product');
+
+  const cartSource = user?.cart?.length ? 'db' : 'frontend';
+  if (cartSource === 'frontend' && (!cartItems || !cartItems.length)) {
+    throw new AppError('Your cart is empty', 400);
+  }
+
+  const orderItems = [];
+  let totalAmount = 0;
+
+  if (cartSource === 'db') {
+    for (const item of user.cart) {
+      const product = item.product;
+      if (!product || !product.isActive) throw new AppError(`${product?.name || 'A product'} is no longer available`, 400);
+      const variant = product.variants.id(item.variant);
+      if (!variant) throw new AppError('Product variant not found', 404);
+      if (variant.stock < item.quantity) throw new AppError(`Only ${variant.stock} of ${product.name} left in stock`, 400);
+      totalAmount += variant.price * item.quantity;
+      orderItems.push({ product: product._id, variant: item.variant, name: product.name, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
+    }
+  } else {
+    for (const item of cartItems) {
+      const product = await Product.findById(item.productId);
+      if (!product || !product.isActive) throw new AppError(`${item.name || 'A product'} is no longer available`, 400);
+      const variant = product.variants.id(item.variantId);
+      if (!variant) throw new AppError(`Variant not found for ${item.name}`, 404);
+      if (variant.stock < item.quantity) throw new AppError(`Only ${variant.stock} of ${product.name} left in stock`, 400);
+      totalAmount += variant.price * item.quantity;
+      orderItems.push({ product: product._id, variant: variant._id, name: product.name, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
+    }
+    await User.findByIdAndUpdate(req.user._id, { $set: { cart: cartItems.map(i => ({ product: i.productId, variant: i.variantId, quantity: i.quantity })) } });
+  }
+
+  // Calculate Delivery Fee & Estimate
+  const { fee: deliveryFee, estimatedDelivery } = calculateDelivery(totalAmount);
+  totalAmount += deliveryFee;
+
+  // Create order — immediately set to 'processing' (COD doesn't need payment confirmation)
+  const order = await Order.create({
+    user: req.user._id,
+    items: orderItems,
+    totalAmount,
+    shippingAddress,
+    status: 'processing',
+    paymentInfo: { method: 'cod', status: 'unpaid' },
+    razorpayOrderId: 'cod',
+    deliveryInfo: {
+      fee: deliveryFee,
+      estimatedDelivery,
+    }
+  });
+
+  // Reduce stock and clear cart
+  await Promise.all([
+    ...orderItems.map((item) =>
+      Product.findOneAndUpdate(
+        { _id: item.product, 'variants._id': item.variant },
+        { $inc: { 'variants.$.stock': -item.quantity } }
+      )
+    ),
+    User.findByIdAndUpdate(req.user._id, { $set: { cart: [] } }),
+  ]);
+
+  // Send confirmation email (non-blocking)
+  sendEmail({
+    to:      req.user.email,
+    subject: 'Order Placed (COD) — RoboMart ⚡',
+    html:    orderConfirmationEmail(order),
+  }).catch((e) => logger.error(`COD email failed: ${e.message}`));
+
+  sendSuccess(res, { orderId: order._id }, 'COD order placed successfully', 201);
+}));
+
+// ─── Step 3: Razorpay Webhook ─────────────────────────────────────────────────
 // Razorpay signs webhook payloads differently from Stripe.
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;

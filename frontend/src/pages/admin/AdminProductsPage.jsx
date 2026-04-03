@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, UploadCloud, Search, AlertCircle, ImageIcon, Layers, Settings2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, UploadCloud, Search, AlertCircle, ImageIcon, Layers, Settings2, Download, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 import api from '../../lib/axios';
+import { exportData } from '../../lib/exportData';
 
 const AdminProductsPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   // Tab State
   const [activeTab, setActiveTab] = useState('general');
@@ -163,6 +165,29 @@ const AdminProductsPage = () => {
     }
   };
 
+  const handleExport = async (format) => {
+    setExportOpen(false);
+    setExporting(true);
+    try {
+      const headers = ['Name', 'SKU', 'Brand', 'Base Price (INR)', 'Variants', 'Total Stock', 'Status'];
+      const rows = products.map(p => [
+        p.name,
+        p.sku,
+        p.brand || '',
+        p.basePrice || 0,
+        p.variants?.length || 0,
+        p.variants?.reduce((s, v) => s + v.stock, 0) || 0,
+        p.isActive ? 'Active' : 'Draft',
+      ]);
+      await exportData({ format, filename: 'robomart_products', title: 'RoboMart — Products Inventory', headers, rows });
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    } catch (e) {
+      toast.error('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -170,9 +195,34 @@ const AdminProductsPage = () => {
           <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '2.2rem', marginBottom: '0.5rem' }}>Inventory</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Advanced SKU and media management engine.</p>
         </div>
-        <button onClick={() => openModal()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Plus size={18} /> Add Product
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {/* Export Dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setExportOpen(v => !v)}
+              disabled={exporting}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+            >
+              <Download size={16} />
+              {exporting ? 'Exporting…' : 'Export'}
+              <ChevronDown size={14} />
+            </button>
+            {exportOpen && (
+              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', minWidth: 160, zIndex: 50, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+                {[['excel', '📊 Excel (.xlsx)'], ['csv', '📋 CSV']].map(([fmt, label]) => (
+                  <button key={fmt} onClick={() => handleExport(fmt)} style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button onClick={() => openModal()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Plus size={18} /> Add Product
+          </button>
+        </div>
       </div>
 
       <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
@@ -322,8 +372,23 @@ const AdminProductsPage = () => {
                         )}
                       </div>
                       <div>
-                        <label className="label">Base Price (₹) *</label>
-                        <input type="number" className="input" placeholder="0.00" {...register('basePrice', { required: true, min: 0 })} />
+                        <label className="label">Base Price (auto from variants)</label>
+                        <div style={{ 
+                          padding: '0.75rem 1rem', 
+                          borderRadius: 'var(--radius-md)', 
+                          background: 'var(--bg-primary)', 
+                          border: '1px solid var(--border)',
+                          color: variants.length > 0 ? 'var(--accent-blue)' : 'var(--text-muted)',
+                          fontWeight: 700,
+                          fontSize: '1.1rem',
+                        }}>
+                          {variants.length > 0
+                            ? `₹${Math.min(...variants.map(v => Number(v.price) || 0)).toLocaleString('en-IN')}`
+                            : '— Set in Variants tab'}
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>
+                          Auto-calculated from the lowest variant price.
+                        </p>
                       </div>
                     </div>
 

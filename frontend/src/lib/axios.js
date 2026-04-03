@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1',
@@ -15,14 +16,25 @@ const processQueue = (error) => {
   failedQueue = [];
 };
 
-// Response interceptor: auto-refresh on 401
+// ─── Global Response Interceptor ────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
 
+    // ── 1. Network error (server unreachable / offline) ──
+    if (!error.response) {
+      toast.error('🔌 Network error — check your connection or the server is down.', {
+        id: 'network-error',  // dedup: only one toast at a time
+        duration: 5000,
+      });
+      return Promise.reject(error);
+    }
+
+    // ── 2. 401 → attempt silent token refresh, then retry ──
     if (
-      error.response?.status === 401 &&
+      status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh') &&
       !originalRequest.url?.includes('/auth/login')
@@ -44,7 +56,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        // Clear user state and redirect to login
         window.dispatchEvent(new CustomEvent('auth:logout'));
         return Promise.reject(refreshError);
       } finally {
@@ -52,6 +63,23 @@ api.interceptors.response.use(
       }
     }
 
+    // ── 3. 429 Rate limit ──
+    if (status === 429) {
+      toast.error('⏳ Too many requests — please slow down and try again shortly.', {
+        id: 'rate-limit',
+        duration: 5000,
+      });
+      return Promise.reject(error);
+    }
+
+    // ── 4. 5xx Server errors → global toast with API message ──
+    if (status >= 500) {
+      const msg = error.response?.data?.message || 'Server error — please try again.';
+      toast.error(`🚨 ${msg}`, { id: `server-error-${status}`, duration: 6000 });
+      return Promise.reject(error);
+    }
+
+    // ── 5. All other 4xx (400, 403, 404…) → let individual pages handle them ──
     return Promise.reject(error);
   }
 );

@@ -27,7 +27,7 @@ router.post('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async 
 }));
 
 router.put('/:id', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
-  const category = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const category = await Category.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
   if (!category) throw new AppError('Category not found', 404);
   sendSuccess(res, category, 'Category updated');
 }));

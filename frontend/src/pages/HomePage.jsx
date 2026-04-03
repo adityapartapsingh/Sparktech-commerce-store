@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { Cpu, Zap, Package, Crown, ArrowRight, ChevronRight } from 'lucide-react';
 import api from '../lib/axios';
@@ -41,6 +42,13 @@ const HomePage = () => {
 
   return (
     <div className="page-wrapper">
+      <Helmet>
+        <title>RoboMart | Professional Robotics & Electronics Store</title>
+        <meta name="description" content="Shop industrial-grade microcontrollers, sensors, motors, and electronic components for your next tech project. Premium parts, fast shipping." />
+        <meta property="og:title" content="RoboMart | Professional Robotics & Electronics Store" />
+        <meta property="og:description" content="Shop industrial-grade microcontrollers, sensors, motors, and electronic components. Premium parts, fast shipping." />
+        <meta property="og:type" content="website" />
+      </Helmet>
 
       {/* === HERO === */}
       <section style={{

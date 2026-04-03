@@ -93,7 +93,7 @@ const AdminLayout = ({ children }) => {
                 color: 'var(--accent-red)', fontWeight: 500, cursor: 'pointer', textAlign: 'left', width: '100%'
               }}>
                 <LogOut size={20} />
-                Sign Out Log
+                Sign Out
               </button>
             </div>
           </motion.aside>

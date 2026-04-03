@@ -42,6 +42,7 @@ const Navbar = () => {
   };
 
   const navLinks = [
+    { to: '/', label: 'Home' },
     { to: '/products', label: 'Products' },
     { to: '/products?featured=true', label: 'Featured' },
     { to: '/products?category=microcontrollers', label: 'Microcontrollers' },

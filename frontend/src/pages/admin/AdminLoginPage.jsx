@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Lock, Mail } from 'lucide-react';
+import { AlertCircle, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { useMutation } from '@tanstack/react-query';
@@ -19,13 +19,14 @@ const AdminLoginPage = () => {
   const navigate = useNavigate();
   const { setUser, logout } = useAuthStore();
   const [serverError, setServerError] = useState('');
+  const [showPass, setShowPass] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(loginSchema),
   });
 
   const loginMutation = useMutation({
-    mutationFn: (data) => api.post('/auth/login', data),
+    mutationFn: (data) => api.post('/auth/login', { identifier: data.email, password: data.password }),
     onSuccess: (res) => {
       const user = res.data.data;
       if (user.role !== 'admin' && user.role !== 'masteradmin') {
@@ -83,8 +84,11 @@ const AdminLoginPage = () => {
           <div>
             <label className="form-label">Password</label>
             <div style={{ position: 'relative' }}>
-              <input type="password" className={`form-input ${errors.password ? 'error' : ''}`} placeholder="••••••••" style={{ paddingLeft: '2.5rem' }} {...register('password')} />
+              <input type={showPass ? 'text' : 'password'} className={`form-input ${errors.password ? 'error' : ''}`} placeholder="••••••••" style={{ paddingLeft: '2.5rem', paddingRight: '2.75rem' }} {...register('password')} />
               <Lock size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
             {errors.password && <p className="form-error">{errors.password.message}</p>}
           </div>

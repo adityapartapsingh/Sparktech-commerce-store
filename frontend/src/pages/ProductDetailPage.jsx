@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, ChevronDown } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
+import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, ChevronDown, MessageSquare, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import api from '../lib/axios';
 import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCartStore();
+  const { user } = useAuthStore();
 
   const [activeImage, setActiveImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [fbType, setFbType] = useState('feedback');
+  const [fbMsg, setFbMsg] = useState('');
+  const [fbRating, setFbRating] = useState(0);
+
+  const feedbackMutation = useMutation({
+    mutationFn: () => api.post(`/products/${slug}/feedback`, { type: fbType, message: fbMsg, rating: fbRating || undefined }),
+    onSuccess: () => { toast.success('Thank you for your feedback!'); setFeedbackOpen(false); setFbMsg(''); setFbRating(0); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to submit feedback'),
+  });
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', slug],
@@ -87,6 +100,12 @@ const ProductDetailPage = () => {
 
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
+      <Helmet>
+        <title>{product.name} | RoboMart</title>
+        <meta name="description" content={product.shortDescription || (product.description?.substring(0, 150) + '...')} />
+        <meta property="og:title" content={`${product.name} - RoboMart`} />
+        {images[0] && <meta property="og:image" content={images[0]} />}
+      </Helmet>
       
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -332,6 +351,79 @@ const ProductDetailPage = () => {
           )}
         </AnimatePresence>
       </div>
+      {/* Feedback / Report Section */}
+      <div style={{ marginTop: '1rem', paddingBottom: '4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <div>
+            <p style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Have a complaint, suggestion, or feedback?</p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Help us improve by sharing your experience with this product.</p>
+          </div>
+          <button
+            onClick={() => user ? setFeedbackOpen(true) : toast.error('Please log in to submit feedback')}
+            className="btn btn-outline"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <MessageSquare size={16} /> Give Feedback
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback Modal */}
+      <AnimatePresence>
+        {feedbackOpen && (
+          <motion.div key="feedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setFeedbackOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 480, boxShadow: '0 30px 60px rgba(0,0,0,0.6)' }}>
+              {/* header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Product Feedback</h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{product.name}</p>
+                </div>
+                <button onClick={() => setFeedbackOpen(false)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  <X size={16} />
+                </button>
+              </div>
+              {/* body */}
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Type */}
+                <div>
+                  <label className="form-label">Type</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {['feedback', 'complaint', 'suggestion', 'compliment'].map(t => (
+                      <button key={t} type="button" onClick={() => setFbType(t)}
+                        style={{ padding: '0.4rem 0.9rem', borderRadius: 99, border: `1.5px solid ${fbType === t ? 'var(--accent-blue)' : 'var(--border)'}`, background: fbType === t ? 'rgba(0,212,255,0.08)' : 'transparent', color: fbType === t ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, textTransform: 'capitalize' }}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Rating */}
+                <div>
+                  <label className="form-label">Rating (optional)</label>
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} type="button" onClick={() => setFbRating(fbRating === n ? 0 : n)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}>
+                        <Star size={24} fill={n <= fbRating ? 'var(--accent-amber)' : 'transparent'} color={n <= fbRating ? 'var(--accent-amber)' : 'var(--border)'} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Message */}
+                <div>
+                  <label className="form-label">Message *</label>
+                  <textarea className="input" rows={4} placeholder="Describe your experience or issue (min 10 characters)..." value={fbMsg} onChange={e => setFbMsg(e.target.value)} style={{ resize: 'vertical' }} />
+                </div>
+                <button onClick={() => feedbackMutation.mutate()} disabled={fbMsg.length < 10 || feedbackMutation.isPending} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                  {feedbackMutation.isPending ? 'Submitting…' : 'Submit Feedback'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

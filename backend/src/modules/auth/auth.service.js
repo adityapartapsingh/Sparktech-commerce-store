@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const AppError = require('../../utils/AppError');
 const { sendEmail } = require('../../utils/sendEmail');
 const AuthRepo = require('./auth.repository');
+const { generateOTP, sendEmailOTP, sendPhoneOTP } = require('../../utils/otp.service');
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_ACCESS_SECRET, {
@@ -22,23 +23,94 @@ const cookieOptions = {
 };
 
 exports.register = async (data, res) => {
-  const existing = await AuthRepo.findByEmail(data.email);
-  if (existing) throw new AppError('Email already in use', 409);
+  const existingEmail = await AuthRepo.findByEmail(data.email);
+  if (existingEmail) throw new AppError('Email already in use', 409);
 
-  const user = await AuthRepo.create(data);
+  // Only check phone uniqueness if a phone was provided
+  if (data.phone && data.phone.trim() !== '') {
+    const existingPhone = await AuthRepo.findByPhone(data.phone);
+    if (existingPhone) throw new AppError('Phone number already in use', 409);
+  }
+
+  // Generate codes
+  const emailOtp = generateOTP();
+  const phoneOtp = data.phone ? generateOTP() : null;
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  const userData = {
+    name:    data.name,
+    email:   data.email,
+    password: data.password,
+    ...(data.phone && data.phone.trim() !== '' && { phone: data.phone }),
+    emailOtp,
+    ...(phoneOtp && { phoneOtp }),
+    emailOtpExpires: otpExpires,
+    ...(phoneOtp && { phoneOtpExpires: otpExpires }),
+    isEmailVerified: false,
+    isPhoneVerified: !phoneOtp, // auto-verify if no phone was provided
+    authProvider: 'local'
+  };
+
+  const user = await AuthRepo.create(userData);
+
+  // Dispatch OTPs — always send email, only phone if number was given
+  const otpPromises = [sendEmailOTP(user.email, emailOtp)];
+  if (phoneOtp && data.phone) otpPromises.push(sendPhoneOTP(data.phone, phoneOtp));
+  await Promise.all(otpPromises);
+
+  const message = phoneOtp
+    ? 'OTP codes dispatched to your email and phone. Check your backend terminal (mocked).'
+    : 'Verification code dispatched to your email. Check your backend terminal (mocked).';
+
+  return { message, userId: user._id };
+};
+
+exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res) => {
+  const user = await AuthRepo.findById(userId).select('+emailOtp +phoneOtp +emailOtpExpires +phoneOtpExpires');
+  if (!user) throw new AppError('User not found', 404);
+
+  // Check expiry — only check phone expiry if phone OTP was generated
+  if (Date.now() > user.emailOtpExpires) {
+    throw new AppError('Email OTP has expired. Please register again.', 400);
+  }
+  if (user.phoneOtpExpires && Date.now() > user.phoneOtpExpires) {
+    throw new AppError('Phone OTP has expired. Please register again.', 400);
+  }
+
+  if (user.emailOtp !== emailOtp) throw new AppError('Invalid Email OTP', 400);
+
+  // Only verify phone OTP if the user has one (phone was provided during registration)
+  if (user.phoneOtp) {
+    if (!phoneOtp) throw new AppError('Phone OTP is required', 400);
+    if (user.phoneOtp !== phoneOtp) throw new AppError('Invalid Phone OTP', 400);
+  }
+
+  // Mark verified
+  user.isEmailVerified = true;
+  user.isPhoneVerified = true;
+  user.emailOtp = undefined;
+  user.phoneOtp = undefined;
+  user.emailOtpExpires = undefined;
+  user.phoneOtpExpires = undefined;
+  await user.save();
+
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
   res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-  return { _id: user._id, name: user.name, email: user.email, role: user.role };
+  return { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role };
 };
 
-exports.login = async ({ email, password }, res) => {
-  const user = await AuthRepo.findByEmail(email);
-  if (!user || !(await user.comparePassword(password))) {
-    throw new AppError('Invalid email or password', 401);
+exports.login = async ({ identifier, password }, res) => {
+  const user = await AuthRepo.findByIdentifier(identifier);
+  if (!user || user.authProvider !== 'local' || !(await user.comparePassword(password))) {
+    throw new AppError('Invalid credentials or account belongs to an OAuth provider', 401);
+  }
+
+  if (!user.isEmailVerified || !user.isPhoneVerified) {
+    throw new AppError('Account is not verified. Please complete your registration via OTP.', 403);
   }
 
   const { accessToken, refreshToken } = generateTokens(user._id);
@@ -48,6 +120,14 @@ exports.login = async ({ email, password }, res) => {
   res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
   return { _id: user._id, name: user.name, email: user.email, role: user.role };
+};
+
+exports.oauthLogin = async (user, res) => {
+  const { accessToken, refreshToken } = generateTokens(user._id);
+  await AuthRepo.updateRefreshToken(user._id, refreshToken);
+
+  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 };
 
 exports.refresh = async (req, res) => {

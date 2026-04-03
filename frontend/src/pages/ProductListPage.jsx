@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { Filter, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../lib/axios';
 import ProductCard from '../features/products/components/ProductCard';
@@ -52,6 +53,11 @@ const ProductListPage = () => {
 
   return (
     <div style={{ paddingTop: '5rem' }}>
+      <Helmet>
+        <title>All Products & Components | RoboMart</title>
+        <meta name="description" content="Browse our entire catalog of microcontrollers, sensors, actuators, and power modules. Filter by category, brand, and price." />
+      </Helmet>
+      
       {/* Header */}
       <div style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', padding: '1.5rem 0' }}>
         <div className="container">

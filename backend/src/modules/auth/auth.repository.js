@@ -1,6 +1,9 @@
 const User = require('../../models/User.model');
 
 exports.findByEmail = (email) => User.findOne({ email }).select('+password +refreshToken');
+exports.findByPhone = (phone) => User.findOne({ phone }).select('+password +refreshToken');
+exports.findByIdentifier = (identifier) => 
+  User.findOne({ $or: [{ email: identifier.toLowerCase() }, { phone: identifier }] }).select('+password +refreshToken');
 exports.findById = (id) => User.findById(id);
 exports.create = (data) => User.create(data);
 exports.updateRefreshToken = (id, token) => User.findByIdAndUpdate(id, { refreshToken: token });
