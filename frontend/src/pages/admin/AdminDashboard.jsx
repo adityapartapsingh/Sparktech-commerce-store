@@ -1,8 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, ShoppingBag, IndianRupee, Package, ArrowUpRight, AlertTriangle, ShieldPlus } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Users, ShoppingBag, IndianRupee, Package, AlertTriangle, ShieldPlus } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';

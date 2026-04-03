@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MapPin, UserCheck, Mail, IndianRupee, Download, ChevronDown } from 'lucide-react';
+import { Search, UserCheck, Mail, IndianRupee, Download, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
 import { exportData } from '../../lib/exportData';

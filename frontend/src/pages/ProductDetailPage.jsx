@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, ChevronDown, MessageSquare, X } from 'lucide-react';
+import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, MessageSquare, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import api from '../lib/axios';

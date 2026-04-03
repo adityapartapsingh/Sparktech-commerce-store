@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, UploadCloud, Search, AlertCircle, ImageIcon, Layers, Settings2, Download, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, UploadCloud, Search, ImageIcon, Layers, Settings2, Download, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
 import { exportData } from '../../lib/exportData';
@@ -29,7 +29,7 @@ const AdminProductsPage = () => {
   // Variant State
   const [variants, setVariants] = useState([]);
   
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, watch } = useForm();
 
   const brandName = watch('brand');
   const catId = watch('category');
