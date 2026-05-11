@@ -28,6 +28,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://sparktech-commerce-store.vercel.app',
 ]
   .filter(Boolean)
   .map(url => url.replace(/\/$/,""));
