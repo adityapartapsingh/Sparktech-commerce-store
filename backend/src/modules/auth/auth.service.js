@@ -4,6 +4,7 @@ const AppError = require('../../utils/AppError');
 const { sendEmail } = require('../../utils/sendEmail');
 const AuthRepo = require('./auth.repository');
 const { generateOTP, sendEmailOTP, sendPhoneOTP } = require('../../utils/otp.service');
+const User = require('../../models/User.model');
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_ACCESS_SECRET, {
@@ -103,7 +104,7 @@ exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res) => {
   return { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role };
 };
 
-exports.login = async ({ identifier, password }, res) => {
+exports.login = async ({ identifier, password }, res, req) => {
   const user = await AuthRepo.findByIdentifier(identifier);
   if (!user || user.authProvider !== 'local' || !(await user.comparePassword(password))) {
     throw new AppError('Invalid credentials or account belongs to an OAuth provider', 401);
@@ -111,6 +112,26 @@ exports.login = async ({ identifier, password }, res) => {
 
   if (!user.isEmailVerified || !user.isPhoneVerified) {
     throw new AppError('Account is not verified. Please complete your registration via OTP.', 403);
+  }
+
+  // Merge guest cart if exists
+  if (req?.session?.cart && req.session.cart.length > 0) {
+    const guestCart = req.session.cart;
+    user.cart = user.cart || [];
+
+    guestCart.forEach(guestItem => {
+      const existingIdx = user.cart.findIndex(
+        item => item.product.toString() === guestItem.product && item.variant.toString() === guestItem.variant
+      );
+      if (existingIdx >= 0) {
+        user.cart[existingIdx].quantity += guestItem.quantity;
+      } else {
+        user.cart.push(guestItem);
+      }
+    });
+
+    await user.save();
+    req.session.cart = []; // Clear guest cart
   }
 
   const { accessToken, refreshToken } = generateTokens(user._id);
@@ -122,7 +143,27 @@ exports.login = async ({ identifier, password }, res) => {
   return { _id: user._id, name: user.name, email: user.email, role: user.role };
 };
 
-exports.oauthLogin = async (user, res) => {
+exports.oauthLogin = async (user, res, req) => {
+  // Merge guest cart if exists
+  if (req?.session?.cart && req.session.cart.length > 0) {
+    const guestCart = req.session.cart;
+    user.cart = user.cart || [];
+
+    guestCart.forEach(guestItem => {
+      const existingIdx = user.cart.findIndex(
+        item => item.product.toString() === guestItem.product && item.variant.toString() === guestItem.variant
+      );
+      if (existingIdx >= 0) {
+        user.cart[existingIdx].quantity += guestItem.quantity;
+      } else {
+        user.cart.push(guestItem);
+      }
+    });
+
+    await user.save();
+    req.session.cart = []; // Clear guest cart
+  }
+
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 

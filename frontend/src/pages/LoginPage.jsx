@@ -7,8 +7,7 @@ import { z } from 'zod';
 import { Zap, Eye, EyeOff, Github } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../lib/axios';
-import { useAuthStore } from '../store/authStore';
-import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';import { useCartStore } from '../store/cartStore';import toast from 'react-hot-toast';
 import { Helmet } from 'react-helmet-async';
 
 // CRA uses process.env.REACT_APP_* (not import.meta.env)
@@ -29,8 +28,10 @@ const LoginPage = () => {
 
   const mutation = useMutation({
     mutationFn: (data) => api.post('/auth/login', { identifier: data.identifier, password: data.password }),
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       setUser(res.data.data);
+      // Fetch updated cart after login (merges guest cart)
+      await useCartStore.getState().fetchCart();
       toast.success(`🎉 Welcome back, ${res.data.data.name}! ⚡`);
       const role = res.data.data.role;
       navigate((role === 'admin' || role === 'masteradmin') ? '/admin/dashboard' : '/');

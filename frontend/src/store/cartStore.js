@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from '../lib/axios';
 
 export const useCartStore = create(
   persist(
@@ -67,6 +68,16 @@ export const useCartStore = create(
 
       // Rollback for optimistic error
       rollback: (previous) => set({ items: previous }),
+
+      // Fetch cart from server
+      fetchCart: async () => {
+        try {
+          const response = await api.get('/cart');
+          set({ items: response.data?.data || response.data || [] });
+        } catch (error) {
+          console.error('Failed to fetch cart:', error);
+        }
+      },
 
       cartTotal: () =>
         get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),

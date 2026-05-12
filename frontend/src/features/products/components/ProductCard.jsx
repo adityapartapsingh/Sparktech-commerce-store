@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Star, Zap } from 'lucide-react';
 import { useCartStore } from '../../../store/cartStore';
+import { useAuthStore } from '../../../store/authStore';
 import toast from 'react-hot-toast';
 import api from '../../../lib/axios';
 
 const ProductCard = ({ product }) => {
   const { addItem } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   const defaultVariant = product.variants?.[0];
 
@@ -20,11 +22,17 @@ const ProductCard = ({ product }) => {
     toast.success(`${product.name} added to cart ⚡`);
 
     try {
-      await api.post('/cart/add', {
+      const response = await api.post('/cart/add', {
         productId: product._id,
         variantId: defaultVariant._id,
         quantity: 1,
       });
+      if (!isAuthenticated) {
+        toast('Login to save your cart permanently!', {
+          icon: '🔐',
+          duration: 4000,
+        });
+      }
     } catch (err) {
       useCartStore.getState().rollback(previous);
       toast.error('Failed to add to cart');
