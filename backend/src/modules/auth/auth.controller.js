@@ -15,13 +15,13 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 });
 
 exports.login = asyncHandler(async (req, res) => {
-  const user = await AuthService.login(req.body, res);
+  const user = await AuthService.login(req.body, res, req);
   sendSuccess(res, user, 'Login successful');
 });
 
 exports.oauthCallback = asyncHandler(async (req, res) => {
   if (!req.user) throw new AppError('OAuth authentication failed', 401);
-  await AuthService.oauthLogin(req.user, res);
+  await AuthService.oauthLogin(req.user, res, req);
   // Redirect to frontend — use FRONTEND_URL (CRA runs on 3000, Vite on 5173)
   const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
   res.redirect(frontendUrl);

@@ -5,10 +5,10 @@ const Product = require('../../models/Product.model');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const AppError = require('../../utils/AppError');
-const { protect } = require('../../middleware/auth.middleware');
+const { protect, optionalProtect } = require('../../middleware/auth.middleware');
 
 // Cart is stored as embedded array in User document
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', optionalProtect, asyncHandler(async (req, res) => {
   if (req.user) {
     const user = await User.findById(req.user._id)
       .populate({ path: 'cart.product', select: 'name slug images variants isActive' });
@@ -18,7 +18,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 }));
 
-router.post('/add', asyncHandler(async (req, res) => {
+router.post('/add', optionalProtect, asyncHandler(async (req, res) => {
   const { productId, variantId, quantity = 1 } = req.body;
 
   const product = await Product.findById(productId);
@@ -68,7 +68,7 @@ router.post('/add', asyncHandler(async (req, res) => {
   }
 }));
 
-router.patch('/update', asyncHandler(async (req, res) => {
+router.patch('/update', optionalProtect, asyncHandler(async (req, res) => {
   const { productId, variantId, quantity } = req.body;
 
   if (req.user) {
@@ -103,15 +103,23 @@ router.patch('/update', asyncHandler(async (req, res) => {
   }
 }));
 
-router.delete('/remove/:productId/:variantId', protect, asyncHandler(async (req, res) => {
+router.delete('/remove/:productId/:variantId', optionalProtect, asyncHandler(async (req, res) => {
   const { productId, variantId } = req.params;
-  await User.findByIdAndUpdate(req.user._id, {
-    $pull: { cart: { product: productId, variant: variantId } },
-  });
-  sendSuccess(res, {}, 'Item removed from cart');
+
+  if (req.user) {
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { cart: { product: productId, variant: variantId } },
+    });
+    sendSuccess(res, {}, 'Item removed from cart');
+  } else {
+    req.session.cart = (req.session.cart || []).filter(
+      (i) => !(i.product.toString() === productId && i.variant.toString() === variantId)
+    );
+    sendSuccess(res, {}, 'Item removed from guest cart');
+  }
 }));
 
-router.delete('/clear', asyncHandler(async (req, res) => {
+router.delete('/clear', optionalProtect, asyncHandler(async (req, res) => {
   if (req.user) {
     await User.findByIdAndUpdate(req.user._id, { $set: { cart: [] } });
     sendSuccess(res, {}, 'Cart cleared');
