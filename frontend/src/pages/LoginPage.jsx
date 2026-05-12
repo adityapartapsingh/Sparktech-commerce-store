@@ -6,12 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Zap, Eye, EyeOff, Github } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import api from '../lib/axios';
+import api, { apiBase as API_BASE } from '../lib/axios';
 import { useAuthStore } from '../store/authStore';import { useCartStore } from '../store/cartStore';import toast from 'react-hot-toast';
 import { Helmet } from 'react-helmet-async';
-
-// CRA uses process.env.REACT_APP_* (not import.meta.env)
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
 const schema = z.object({
   identifier: z.string().min(3, 'Email or Phone is required'),

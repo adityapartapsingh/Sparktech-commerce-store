@@ -1,8 +1,16 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+const normalizeApiUrl = (url) => {
+  if (!url) return url;
+  const cleaned = url.replace(/\/+$|\s+/g, '');
+  return cleaned.endsWith('/api/v1') ? cleaned : `${cleaned}/api/v1`;
+};
+
+export const apiBase = normalizeApiUrl(process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1');
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: apiBase,
   withCredentials: true,  // Send HTTP-only cookies
   headers: { 'Content-Type': 'application/json' },
 });
