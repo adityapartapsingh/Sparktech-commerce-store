@@ -19,7 +19,7 @@ const generateTokens = (userId) => {
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   path: '/',
 };
 
@@ -114,26 +114,6 @@ exports.login = async ({ identifier, password }, res, req) => {
     throw new AppError('Account is not verified. Please complete your registration via OTP.', 403);
   }
 
-  // Merge guest cart if exists
-  if (req?.session?.cart && req.session.cart.length > 0) {
-    const guestCart = req.session.cart;
-    user.cart = user.cart || [];
-
-    guestCart.forEach(guestItem => {
-      const existingIdx = user.cart.findIndex(
-        item => item.product.toString() === guestItem.product && item.variant.toString() === guestItem.variant
-      );
-      if (existingIdx >= 0) {
-        user.cart[existingIdx].quantity += guestItem.quantity;
-      } else {
-        user.cart.push(guestItem);
-      }
-    });
-
-    await user.save();
-    req.session.cart = []; // Clear guest cart
-  }
-
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
@@ -143,27 +123,7 @@ exports.login = async ({ identifier, password }, res, req) => {
   return { _id: user._id, name: user.name, email: user.email, role: user.role };
 };
 
-exports.oauthLogin = async (user, res, req) => {
-  // Merge guest cart if exists
-  if (req?.session?.cart && req.session.cart.length > 0) {
-    const guestCart = req.session.cart;
-    user.cart = user.cart || [];
-
-    guestCart.forEach(guestItem => {
-      const existingIdx = user.cart.findIndex(
-        item => item.product.toString() === guestItem.product && item.variant.toString() === guestItem.variant
-      );
-      if (existingIdx >= 0) {
-        user.cart[existingIdx].quantity += guestItem.quantity;
-      } else {
-        user.cart.push(guestItem);
-      }
-    });
-
-    await user.save();
-    req.session.cart = []; // Clear guest cart
-  }
-
+exports.oauthLogin = async (user, res) => {
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
@@ -212,10 +172,10 @@ exports.forgotPassword = async (email) => {
   user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 min
   await user.save({ validateBeforeSave: false });
 
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
+  const resetUrl = `${process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${token}`;
   await sendEmail({
     to: user.email,
-    subject: 'RoboMart — Password Reset',
+    subject: 'SparkTech — Password Reset',
     html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 30 minutes.</p>`,
   });
 };

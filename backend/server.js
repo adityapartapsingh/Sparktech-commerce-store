@@ -21,12 +21,35 @@ const startServer = async () => {
   });
 
   // Graceful shutdown
-  const shutdown = (signal) => {
+  const shutdown = async (signal) => {
     logger.info(`${signal} received. Shutting down gracefully...`);
-    server.close(() => {
+    server.close(async () => {
       logger.info('HTTP server closed');
+      try {
+        const mongoose = require('mongoose');
+        await mongoose.connection.close();
+        logger.info('MongoDB connection closed');
+      } catch (e) {
+        logger.error(`MongoDB disconnect error: ${e.message}`);
+      }
+      try {
+        const { getRedis } = require('./src/config/redis');
+        const redis = getRedis();
+        if (redis) {
+          await redis.quit();
+          logger.info('Redis connection closed');
+        }
+      } catch (e) {
+        logger.error(`Redis disconnect error: ${e.message}`);
+      }
       process.exit(0);
     });
+
+    // Force exit after 10s if graceful shutdown hangs
+    setTimeout(() => {
+      logger.error('Graceful shutdown timed out, forcing exit');
+      process.exit(1);
+    }, 10000);
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async ({ to, subject, html }) => {
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'RoboMart <noreply@robomart.com>',
+      from: process.env.EMAIL_FROM || 'SparkTech <noreply@SparkTech.com>',
       to,
       subject,
       html,
@@ -31,7 +31,7 @@ const sendEmail = async ({ to, subject, html }) => {
 const orderConfirmationEmail = (order) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
     <div style="background: #0A0A0F; padding: 20px; text-align: center;">
-      <h1 style="color: #00D4FF; margin: 0;">⚡ RoboMart</h1>
+      <h1 style="color: #00D4FF; margin: 0;">⚡ SparkTech</h1>
     </div>
     <div style="padding: 30px; background: #f9f9f9;">
       <h2>Order Confirmed! 🎉</h2>

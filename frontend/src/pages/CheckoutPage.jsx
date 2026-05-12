@@ -6,12 +6,14 @@ import * as z from 'zod';
 import { motion } from 'framer-motion';
 import {
   ShieldCheck, MapPin, CreditCard, ChevronRight, Zap,
-  Truck, CheckCircle2,
+  Truck, CheckCircle2, Home, Building2, MapPinned, AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Helmet } from 'react-helmet-async';
 
 import api from '../lib/axios';
 import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
 
 const checkoutSchema = z.object({
   line1:   z.string().min(5, 'Street address is required'),
@@ -30,14 +32,14 @@ const PayMethodCard = ({ id, icon: Icon, title, desc, selected, onSelect }) => (
       display: 'flex', alignItems: 'center', gap: '1rem',
       padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)',
       border: `2px solid ${selected ? 'var(--accent-blue)' : 'var(--border)'}`,
-      background: selected ? 'rgba(0,212,255,0.06)' : 'var(--bg-elevated)',
+      background: selected ? 'rgba(59,130,246,0.06)' : 'var(--bg-elevated)',
       cursor: 'pointer', textAlign: 'left', width: '100%',
       transition: 'all 0.2s ease',
     }}
   >
     <div style={{
       width: 40, height: 40, borderRadius: 'var(--radius-sm)',
-      background: selected ? 'rgba(0,212,255,0.15)' : 'var(--bg-secondary)',
+      background: selected ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0, color: selected ? 'var(--accent-blue)' : 'var(--text-muted)',
     }}>
@@ -51,12 +53,59 @@ const PayMethodCard = ({ id, icon: Icon, title, desc, selected, onSelect }) => (
   </button>
 );
 
+/* ── Saved Address Card ──────────────────────────────── */
+const LABEL_ICONS = { Home, Work: Building2, Other: MapPinned };
+const SavedAddressCard = ({ addr, selected, onSelect }) => {
+  const Icon = LABEL_ICONS[addr.label] || MapPinned;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+        padding: '1rem', borderRadius: 'var(--radius-md)',
+        border: `2px solid ${selected ? 'var(--accent-blue)' : 'var(--border)'}`,
+        background: selected ? 'rgba(59,130,246,0.05)' : 'var(--bg-elevated)',
+        cursor: 'pointer', textAlign: 'left', width: '100%',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <div style={{
+        width: 36, height: 36, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+        background: selected ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: selected ? 'var(--accent-blue)' : 'var(--text-muted)',
+      }}>
+        <Icon size={16} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.15rem' }}>{addr.label}</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+          {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}, {addr.city}, {addr.state} — {addr.pincode}
+        </p>
+        {addr.phone && <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.15rem' }}>Ph: {addr.phone}</p>}
+      </div>
+      {selected && <CheckCircle2 size={18} color="var(--accent-blue)" style={{ flexShrink: 0, marginTop: 2 }} />}
+    </button>
+  );
+};
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { items, cartTotal, clearCart } = useCartStore();
+  const { user } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [razorpayKey, setRazorpayKey] = useState(null);
   const [payMethod, setPayMethod] = useState('razorpay'); // 'razorpay' | 'cod'
+  const [selectedAddrId, setSelectedAddrId] = useState(null); // saved address ID
+  const [useCustom, setUseCustom] = useState(false);
+
+  // Auto-select first saved address
+  useEffect(() => {
+    if (user?.addresses?.length > 0 && !selectedAddrId && !useCustom) {
+      setSelectedAddrId(user.addresses[0]._id);
+    }
+  }, [user, selectedAddrId, useCustom]);
 
   // Fetch Razorpay key + load SDK script
   useEffect(() => {
@@ -79,12 +128,26 @@ const CheckoutPage = () => {
     name:      i.name,
   }));
 
+  const getShippingAddress = (formData) => {
+    if (useCustom || !selectedAddrId) return formData;
+    const addr = user?.addresses?.find(a => a._id === selectedAddrId);
+    if (!addr) return formData;
+    return {
+      line1: addr.line1,
+      line2: addr.line2 || '',
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      phone: addr.phone || user.phone || '',
+    };
+  };
+
   /* ── COD Handler ─────────────────────────────────────────── */
-  const placeCOD = async (data) => {
+  const placeCOD = async (address) => {
     setIsProcessing(true);
     try {
-      await api.post('/payments/cod', { shippingAddress: data, cartItems });
-      toast.success('Order placed! Pay on delivery 🚚');
+      await api.post('/payments/cod', { shippingAddress: address, cartItems });
+      toast.success('Order placed! Pay on delivery.');
       clearCart();
       navigate('/order-confirmation');
     } catch (err) {
@@ -95,12 +158,12 @@ const CheckoutPage = () => {
   };
 
   /* ── Razorpay Handler ───────────────────────────────────── */
-  const placeRazorpay = async (data) => {
+  const placeRazorpay = async (address) => {
     if (!razorpayKey) return toast.error('Payment gateway not ready. Please try again.');
     setIsProcessing(true);
     try {
       const orderRes = await api.post('/payments/create-order', {
-        shippingAddress: data,
+        shippingAddress: address,
         cartItems,
       });
       const { orderId, razorpayOrderId, amount, currency } = orderRes.data.data;
@@ -108,12 +171,12 @@ const CheckoutPage = () => {
       const options = {
         key: razorpayKey,
         amount, currency,
-        name: 'RoboMart',
+        name: 'SparkTech',
         description: 'Purchase of electronic parts',
         order_id: razorpayOrderId,
         handler: async function (response) {
           try {
-            toast.loading('Verifying payment...', { id: 'verify' });
+            toast.loading('Verifying payment…', { id: 'verify' });
             await api.post('/payments/verify', {
               razorpay_order_id:   response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -127,8 +190,8 @@ const CheckoutPage = () => {
             toast.error(err.response?.data?.message || 'Payment verification failed', { id: 'verify' });
           }
         },
-        prefill: { contact: data.phone },
-        theme: { color: '#00d4ff' },
+        prefill: { contact: address.phone },
+        theme: { color: '#3b82f6' },
         modal: {
           ondismiss: () => {
             setIsProcessing(false);
@@ -151,9 +214,19 @@ const CheckoutPage = () => {
   };
 
   /* ── Main Submit ────────────────────────────────────────── */
-  const onSubmit = (data) => {
+  const onSubmit = (formData) => {
     if (items.length === 0) return toast.error('Cart is empty');
-    payMethod === 'cod' ? placeCOD(data) : placeRazorpay(data);
+    const address = getShippingAddress(formData);
+    payMethod === 'cod' ? placeCOD(address) : placeRazorpay(address);
+  };
+
+  // Allow saved-address checkout without form validation
+  const handleSavedAddressSubmit = () => {
+    if (items.length === 0) return toast.error('Cart is empty');
+    if (!selectedAddrId) return toast.error('Select an address');
+    const address = getShippingAddress(null);
+    if (!address?.line1) return toast.error('Invalid saved address');
+    payMethod === 'cod' ? placeCOD(address) : placeRazorpay(address);
   };
 
   if (items.length === 0) {
@@ -166,11 +239,18 @@ const CheckoutPage = () => {
     );
   }
 
+  const savedAddresses = user?.addresses || [];
+  const usingSavedAddress = !useCustom && selectedAddrId && savedAddresses.length > 0;
+
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
+      <Helmet>
+        <title>Checkout | SparkTech</title>
+        <meta name="description" content="Complete your SparkTech order. Secure checkout with Razorpay or Cash on Delivery." />
+      </Helmet>
       <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '2rem', marginBottom: '2rem' }}>Checkout</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '3rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '2rem', alignItems: 'start' }}>
 
         {/* ── Left col ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -181,37 +261,73 @@ const CheckoutPage = () => {
               <MapPin color="var(--accent-blue)" />
               <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Shipping Address</h2>
             </div>
-            <form id="checkout-form" onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label className="form-label">Street Address / Line 1</label>
-                <input type="text" className={`form-input ${errors.line1 ? 'error' : ''}`} placeholder="123 Tech Park" {...register('line1')} />
-                {errors.line1 && <span className="form-error">{errors.line1.message}</span>}
+
+            {/* Saved Addresses */}
+            {savedAddresses.length > 0 && !useCustom && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                {savedAddresses.map(addr => (
+                  <SavedAddressCard
+                    key={addr._id}
+                    addr={addr}
+                    selected={selectedAddrId === addr._id}
+                    onSelect={() => { setSelectedAddrId(addr._id); setUseCustom(false); }}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => { setUseCustom(true); setSelectedAddrId(null); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, padding: '0.5rem 0' }}
+                >
+                  <MapPinned size={14} /> Use a different address
+                </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label className="form-label">City</label>
-                  <input type="text" className={`form-input ${errors.city ? 'error' : ''}`} placeholder="Bangalore" {...register('city')} />
-                  {errors.city && <span className="form-error">{errors.city.message}</span>}
-                </div>
-                <div>
-                  <label className="form-label">State</label>
-                  <input type="text" className={`form-input ${errors.state ? 'error' : ''}`} placeholder="Karnataka" {...register('state')} />
-                  {errors.state && <span className="form-error">{errors.state.message}</span>}
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label className="form-label">Pincode</label>
-                  <input type="text" className={`form-input ${errors.pincode ? 'error' : ''}`} placeholder="560001" {...register('pincode')} />
-                  {errors.pincode && <span className="form-error">{errors.pincode.message}</span>}
-                </div>
-                <div>
-                  <label className="form-label">Phone Number</label>
-                  <input type="text" className={`form-input ${errors.phone ? 'error' : ''}`} placeholder="9876543210" {...register('phone')} />
-                  {errors.phone && <span className="form-error">{errors.phone.message}</span>}
-                </div>
-              </div>
-            </form>
+            )}
+
+            {/* Manual address form (shown when no saved addresses or user clicked "different address") */}
+            {(useCustom || savedAddresses.length === 0) && (
+              <>
+                {savedAddresses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { setUseCustom(false); setSelectedAddrId(savedAddresses[0]._id); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, padding: '0 0 1rem 0' }}
+                  >
+                    <Home size={14} /> Use saved address instead
+                  </button>
+                )}
+                <form id="checkout-form" onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div>
+                    <label className="form-label">Street Address / Line 1</label>
+                    <input type="text" className={`form-input ${errors.line1 ? 'error' : ''}`} placeholder="123 Tech Park" {...register('line1')} />
+                    {errors.line1 && <span className="form-error">{errors.line1.message}</span>}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label className="form-label">City</label>
+                      <input type="text" className={`form-input ${errors.city ? 'error' : ''}`} placeholder="Bangalore" {...register('city')} />
+                      {errors.city && <span className="form-error">{errors.city.message}</span>}
+                    </div>
+                    <div>
+                      <label className="form-label">State</label>
+                      <input type="text" className={`form-input ${errors.state ? 'error' : ''}`} placeholder="Karnataka" {...register('state')} />
+                      {errors.state && <span className="form-error">{errors.state.message}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label className="form-label">Pincode</label>
+                      <input type="text" className={`form-input ${errors.pincode ? 'error' : ''}`} placeholder="560001" {...register('pincode')} />
+                      {errors.pincode && <span className="form-error">{errors.pincode.message}</span>}
+                    </div>
+                    <div>
+                      <label className="form-label">Phone Number</label>
+                      <input type="text" className={`form-input ${errors.phone ? 'error' : ''}`} placeholder="9876543210" {...register('phone')} />
+                      {errors.phone && <span className="form-error">{errors.phone.message}</span>}
+                    </div>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
 
           {/* Payment Method Selector */}
@@ -225,7 +341,7 @@ const CheckoutPage = () => {
                 id="razorpay"
                 icon={CreditCard}
                 title="Pay Online — Razorpay"
-                desc="UPI, Cards, Net Banking, Wallets. Secure &amp; instant."
+                desc="UPI, Cards, Net Banking, Wallets. Secure & instant."
                 selected={payMethod === 'razorpay'}
                 onSelect={setPayMethod}
               />
@@ -240,7 +356,7 @@ const CheckoutPage = () => {
             </div>
             {payMethod === 'cod' && (
               <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                ⚠ COD orders are set to <strong>Processing</strong> immediately. Payment collected on delivery.
+                <AlertTriangle size={14} /> COD orders are set to <strong>Processing</strong> immediately. Payment collected on delivery.
               </p>
             )}
           </div>
@@ -302,8 +418,9 @@ const CheckoutPage = () => {
 
           <motion.button
             whileTap={{ scale: 0.98 }}
-            type="submit"
-            form="checkout-form"
+            type={usingSavedAddress ? 'button' : 'submit'}
+            form={usingSavedAddress ? undefined : 'checkout-form'}
+            onClick={usingSavedAddress ? handleSavedAddressSubmit : undefined}
             disabled={isProcessing}
             className={`btn ${payMethod === 'cod' ? 'btn-amber' : 'btn-primary'}`}
             style={{ width: '100%', justifyContent: 'center', padding: '1rem', fontSize: '1rem', gap: '0.5rem' }}

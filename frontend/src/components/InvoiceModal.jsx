@@ -50,9 +50,9 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
     doc.setFontSize(22); doc.setTextColor(0, 212, 255);
-    doc.text('RoboMart', 40, 50);
+    doc.text('SparkTech', 40, 50);
     doc.setFontSize(9); doc.setTextColor(100, 100, 120);
-    doc.text('robomart.com  |  support@robomart.com', 40, 63);
+    doc.text('SparkTech.com  |  support@SparkTech.com', 40, 63);
     doc.setFontSize(20); doc.setTextColor(30, 30, 50);
     doc.text('INVOICE', 500, 50, { align: 'right' });
     doc.setFontSize(9); doc.setTextColor(100, 100, 120);
@@ -98,7 +98,7 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
     doc.text('TOTAL', 380, totalY);
     doc.text(`Rs.${order.totalAmount?.toLocaleString('en-IN')}`, 500, totalY, { align: 'right' });
     doc.setFontSize(8); doc.setTextColor(140);
-    doc.text('Thank you for shopping with RoboMart!', 40, totalY + 30);
+    doc.text('Thank you for shopping with SparkTech!', 40, totalY + 30);
     doc.save(`${invoiceNo}.pdf`);
   };
 
@@ -108,8 +108,8 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
       <div id="invoice-printable" style={{ display: 'none' }}>
         <div className="row">
           <div>
-            <div className="logo">⚡ RoboMart</div>
-            <div style={{ fontSize: '0.8rem', color: '#666' }}>robomart.com | support@robomart.com</div>
+            <div className="logo">SparkTech</div>
+            <div style={{ fontSize: '0.8rem', color: '#666' }}>SparkTech.com | support@SparkTech.com</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>INVOICE</div>
@@ -155,7 +155,7 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
             <tr className="total-row"><td colSpan="5" style={{ textAlign: 'right' }}>TOTAL</td><td>₹{order.totalAmount?.toLocaleString('en-IN')}</td></tr>
           </tbody>
         </table>
-        <div className="footer">Thank you for shopping with RoboMart! · support@robomart.com</div>
+        <div className="footer">Thank you for shopping with SparkTech! · support@SparkTech.com</div>
       </div>
 
       {/* Modal Overlay */}
@@ -191,12 +191,12 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-amber))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>⚡</div>
-                  <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 900, fontSize: '1.4rem' }}>
-                    <span style={{ color: 'var(--accent-blue)' }}>Robo</span>Mart
+                  <div style={{ width: 30, height: 30, borderRadius: 7, background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}>S</div>
+                  <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)' }}>
+                    SparkTech
                   </span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>robomart.com · support@robomart.com</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>SparkTech.com · support@SparkTech.com</p>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '0.05em' }}>INVOICE</p>
@@ -275,7 +275,7 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
               </div>
             </div>
             <p style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-              Thank you for shopping with RoboMart! · support@robomart.com
+              Thank you for shopping with SparkTech! · support@SparkTech.com
             </p>
           </div>
         </div>

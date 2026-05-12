@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Search, Menu, X, Zap, User, LogOut, LayoutDashboard, Package } from 'lucide-react';
+import { ShoppingCart, Search, Menu, X, Zap, User, LogOut, LayoutDashboard, Package, Heart, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
+import { useThemeStore } from '../../store/themeStore';
+import SearchBar from '../../features/search/SearchBar';
 import api from '../../lib/axios';
 import toast from 'react-hot-toast';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const { cartCount, openCart } = useCartStore();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -30,15 +32,6 @@ const Navbar = () => {
     logout();
     toast.success('Logged out');
     navigate('/');
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
-      setSearchQuery('');
-    }
   };
 
   const navLinks = [
@@ -60,9 +53,9 @@ const Navbar = () => {
           left: 0,
           right: 0,
           zIndex: 1000,
-          background: scrolled ? 'rgba(10,10,15,0.95)' : 'transparent',
+          background: scrolled ? 'var(--bg-card)' : 'transparent',
           backdropFilter: scrolled ? 'blur(12px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          borderBottom: scrolled ? '1px solid var(--border)' : 'none',
           transition: 'all 0.3s ease',
           padding: '1rem 0',
         }}
@@ -71,16 +64,15 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" style={{ display:'flex', alignItems:'center', gap:'0.5rem', textDecoration:'none' }}>
             <div style={{
-              width: 36, height: 36,
-              background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-amber))',
+              width: 34, height: 34,
+              background: 'var(--accent-blue)',
               borderRadius: 8,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Zap size={20} color="#0A0A0F" fill="#0A0A0F" />
+              <Zap size={18} color="#fff" />
             </div>
-            <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:800, fontSize:'1.3rem' }}>
-              <span className="gradient-text">Robo</span>
-              <span style={{ color:'var(--text-primary)' }}>Mart</span>
+            <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.2rem', color: 'var(--text-primary)' }}>
+              SparkTech
             </span>
           </Link>
 
@@ -111,6 +103,18 @@ const Navbar = () => {
             <button className="btn btn-ghost" onClick={() => setSearchOpen(true)} style={{ padding:'0.5rem' }}>
               <Search size={20} />
             </button>
+
+            {/* Theme Toggle */}
+            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            {/* Wishlist */}
+            {isAuthenticated && (
+              <Link to="/wishlist" className="btn btn-ghost" style={{ padding: '0.5rem', position: 'relative' }}>
+                <Heart size={20} />
+              </Link>
+            )}
 
             {/* Cart */}
             <button
@@ -178,7 +182,7 @@ const Navbar = () => {
                       {[
                         { to:'/profile', icon:<User size={16}/>, label:'Profile' },
                         { to:'/orders', icon:<Package size={16}/>, label:'Orders' },
-                        ...(user?.role==='admin' ? [{ to:'/admin', icon:<LayoutDashboard size={16}/>, label:'Admin' }] : []),
+                        ...(user?.role==='admin' || user?.role==='masteradmin' ? [{ to:'/admin/dashboard', icon:<LayoutDashboard size={16}/>, label:'Admin Panel' }] : []),
                       ].map(({ to, icon, label }) => (
                         <Link key={to} to={to} onClick={() => setDropdownOpen(false)} style={{
                           display:'flex', alignItems:'center', gap:'0.75rem',
@@ -255,34 +259,20 @@ const Navbar = () => {
             onClick={() => setSearchOpen(false)}
             style={{
               position:'fixed', inset:0, background:'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(6px)',
               zIndex:2000, display:'flex', alignItems:'flex-start', justifyContent:'center',
-              paddingTop:'20vh',
+              paddingTop:'18vh',
             }}
           >
-            <motion.form
+            <motion.div
               initial={{ y:-20, opacity:0 }}
               animate={{ y:0, opacity:1 }}
               exit={{ y:-20, opacity:0 }}
-              onSubmit={handleSearch}
               onClick={(e) => e.stopPropagation()}
-              style={{ width:'min(600px, 90vw)', position:'relative' }}
+              style={{ width:'min(600px, 90vw)' }}
             >
-              <Search size={20} style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }} />
-              <input
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products, components, brands..."
-                className="input"
-                style={{ paddingLeft:48, paddingRight:48, padding:'1rem 1rem 1rem 3rem', fontSize:'1.1rem', borderRadius:'var(--radius-lg)' }}
-              />
-              <button type="button" onClick={() => setSearchOpen(false)} style={{
-                position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
-                background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)',
-              }}>
-                <X size={20} />
-              </button>
-            </motion.form>
+              <SearchBar onClose={() => setSearchOpen(false)} />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

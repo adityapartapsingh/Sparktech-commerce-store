@@ -11,6 +11,9 @@ const { protect } = require('../../middleware/auth.middleware');
 const AppError = require('../../utils/AppError');
 const { sendEmail, orderConfirmationEmail } = require('../../utils/sendEmail');
 const logger = require('../../utils/logger');
+const validate = require('../../middleware/validate.middleware');
+const { CreateOrderSchema, VerifyPaymentSchema, CODOrderSchema } = require('../schemas');
+const { sendOrderConfirmationSMS } = require('../../utils/sms.service');
 
 // Lazy init — reads env vars after dotenv.config() has run
 let _razorpay;
@@ -34,7 +37,7 @@ const calculateDelivery = (subtotal) => {
 
 // ─── Step 1: Create Razorpay Order ──────────────────────────────────────────
 // Frontend calls this first to get an order_id, then opens the Razorpay modal.
-router.post('/create-order', protect, asyncHandler(async (req, res) => {
+router.post('/create-order', protect, validate(CreateOrderSchema), asyncHandler(async (req, res) => {
   const { shippingAddress, cartItems } = req.body;
   const user = await User.findById(req.user._id).populate('cart.product');
 
@@ -156,7 +159,7 @@ router.post('/create-order', protect, asyncHandler(async (req, res) => {
 
 // ─── Step 2: Verify Payment (called after Razorpay modal success) ─────────────
 // Frontend sends { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-router.post('/verify', protect, asyncHandler(async (req, res) => {
+router.post('/verify', protect, validate(VerifyPaymentSchema), asyncHandler(async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
 
   // Verify signature (idempotency + authenticity)
@@ -198,16 +201,20 @@ router.post('/verify', protect, asyncHandler(async (req, res) => {
   // Send confirmation email (non-blocking)
   sendEmail({
     to:      req.user.email,
-    subject: 'Order Confirmed — RoboMart ⚡',
+    subject: 'Order Confirmed — SparkTech ⚡',
     html:    orderConfirmationEmail(order),
   }).catch((e) => logger.error(`Email send failed: ${e.message}`));
+
+  // Send confirmation SMS (non-blocking)
+  sendOrderConfirmationSMS(req.user.phone, order._id, order.totalAmount)
+    .catch((e) => logger.error(`SMS send failed: ${e.message}`));
 
   sendSuccess(res, { orderId: order._id }, 'Payment verified and order confirmed');
 }));
 
 
 // ─── COD: Place order without online payment ─────────────────────────────────
-router.post('/cod', protect, asyncHandler(async (req, res) => {
+router.post('/cod', protect, validate(CODOrderSchema), asyncHandler(async (req, res) => {
   const { shippingAddress, cartItems } = req.body;
   const user = await User.findById(req.user._id).populate('cart.product');
 
@@ -275,15 +282,19 @@ router.post('/cod', protect, asyncHandler(async (req, res) => {
   // Send confirmation email (non-blocking)
   sendEmail({
     to:      req.user.email,
-    subject: 'Order Placed (COD) — RoboMart ⚡',
+    subject: 'Order Placed (COD) — SparkTech ⚡',
     html:    orderConfirmationEmail(order),
   }).catch((e) => logger.error(`COD email failed: ${e.message}`));
+
+  // Send confirmation SMS (non-blocking)
+  sendOrderConfirmationSMS(req.user.phone, order._id, order.totalAmount)
+    .catch((e) => logger.error(`COD SMS failed: ${e.message}`));
 
   sendSuccess(res, { orderId: order._id }, 'COD order placed successfully', 201);
 }));
 
 // ─── Step 3: Razorpay Webhook ─────────────────────────────────────────────────
-// Razorpay signs webhook payloads differently from Stripe.
+// Razorpay sends webhook events for payment status changes (capture, failed, etc.)
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 

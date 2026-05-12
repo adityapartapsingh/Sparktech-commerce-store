@@ -75,7 +75,7 @@ const AdminLoginPage = () => {
           <div>
             <label className="form-label">Email Address</label>
             <div style={{ position: 'relative' }}>
-              <input type="email" className={`form-input ${errors.email ? 'error' : ''}`} placeholder="admin@robomart.com" style={{ paddingLeft: '2.5rem' }} {...register('email')} />
+              <input type="email" className={`form-input ${errors.email ? 'error' : ''}`} placeholder="admin@SparkTech.com" style={{ paddingLeft: '2.5rem' }} {...register('email')} />
               <Mail size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             </div>
             {errors.email && <p className="form-error">{errors.email.message}</p>}

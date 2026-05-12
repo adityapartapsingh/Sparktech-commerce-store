@@ -179,7 +179,7 @@ const AdminProductsPage = () => {
         p.variants?.reduce((s, v) => s + v.stock, 0) || 0,
         p.isActive ? 'Active' : 'Draft',
       ]);
-      await exportData({ format, filename: 'robomart_products', title: 'RoboMart — Products Inventory', headers, rows });
+      await exportData({ format, filename: 'SparkTech_products', title: 'SparkTech — Products Inventory', headers, rows });
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch (e) {
       toast.error('Export failed');
@@ -209,7 +209,7 @@ const AdminProductsPage = () => {
             </button>
             {exportOpen && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', minWidth: 160, zIndex: 50, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
-                {[['excel', '📊 Excel (.xlsx)'], ['csv', '📋 CSV']].map(([fmt, label]) => (
+                {[['excel', 'Excel (.xlsx)'], ['csv', 'CSV']].map(([fmt, label]) => (
                   <button key={fmt} onClick={() => handleExport(fmt)} style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'none'}>

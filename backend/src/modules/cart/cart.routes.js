@@ -5,20 +5,21 @@ const Product = require('../../models/Product.model');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const AppError = require('../../utils/AppError');
-const { protect, optionalProtect } = require('../../middleware/auth.middleware');
+const { protect } = require('../../middleware/auth.middleware');
+const validate = require('../../middleware/validate.middleware');
+const { AddToCartSchema, UpdateCartSchema } = require('../schemas');
 
-// Cart is stored as embedded array in User document
-router.get('/', optionalProtect, asyncHandler(async (req, res) => {
-  if (req.user) {
-    const user = await User.findById(req.user._id)
-      .populate({ path: 'cart.product', select: 'name slug images variants isActive' });
-    sendSuccess(res, user?.cart || [], 'Cart fetched');
-  } else {
-    sendSuccess(res, req.session.cart || [], 'Guest cart fetched');
-  }
+// Cart is stored as embedded array in User document.
+// Guest cart is handled entirely in the frontend (Zustand + localStorage).
+// All server-side cart routes require authentication.
+
+router.get('/', protect, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .populate({ path: 'cart.product', select: 'name slug images variants isActive' });
+  sendSuccess(res, user?.cart || [], 'Cart fetched');
 }));
 
-router.post('/add', optionalProtect, asyncHandler(async (req, res) => {
+router.post('/add', protect, validate(AddToCartSchema), asyncHandler(async (req, res) => {
   const { productId, variantId, quantity = 1 } = req.body;
 
   const product = await Product.findById(productId);
@@ -28,105 +29,55 @@ router.post('/add', optionalProtect, asyncHandler(async (req, res) => {
   if (!variant) throw new AppError('Variant not found', 404);
   if (variant.stock < quantity) throw new AppError(`Only ${variant.stock} items in stock`, 400);
 
-  if (req.user) {
-    // User cart
-    const user = await User.findById(req.user._id);
-    const existingIdx = user.cart?.findIndex(
-      (item) => item.product.toString() === productId && item.variant.toString() === variantId
+  const user = await User.findById(req.user._id);
+  const existingIdx = user.cart?.findIndex(
+    (item) => item.product.toString() === productId && item.variant.toString() === variantId
+  );
+
+  if (existingIdx !== undefined && existingIdx >= 0) {
+    user.cart[existingIdx].quantity = Math.min(
+      user.cart[existingIdx].quantity + quantity,
+      variant.stock
     );
-
-    if (existingIdx !== undefined && existingIdx >= 0) {
-      user.cart[existingIdx].quantity = Math.min(
-        user.cart[existingIdx].quantity + quantity,
-        variant.stock
-      );
-    } else {
-      user.cart = user.cart || [];
-      user.cart.push({ product: productId, variant: variantId, quantity });
-    }
-
-    await user.save();
-    sendSuccess(res, user.cart, 'Item added to cart');
   } else {
-    // Guest cart
-    req.session.cart = req.session.cart || [];
-    const cart = req.session.cart;
-    const existingIdx = cart.findIndex(
-      (item) => item.product.toString() === productId && item.variant.toString() === variantId
-    );
-
-    if (existingIdx >= 0) {
-      cart[existingIdx].quantity = Math.min(
-        cart[existingIdx].quantity + quantity,
-        variant.stock
-      );
-    } else {
-      cart.push({ product: productId, variant: variantId, quantity });
-    }
-
-    sendSuccess(res, cart, 'Item added to guest cart. Login to save permanently.');
+    user.cart = user.cart || [];
+    user.cart.push({ product: productId, variant: variantId, quantity });
   }
+
+  await user.save();
+  sendSuccess(res, user.cart, 'Item added to cart');
 }));
 
-router.patch('/update', optionalProtect, asyncHandler(async (req, res) => {
+router.patch('/update', protect, validate(UpdateCartSchema), asyncHandler(async (req, res) => {
   const { productId, variantId, quantity } = req.body;
 
-  if (req.user) {
-    const user = await User.findById(req.user._id);
-    const item = user.cart?.find(
-      (i) => i.product.toString() === productId && i.variant.toString() === variantId
-    );
-    if (!item) throw new AppError('Item not in cart', 404);
-    if (quantity < 1) {
-      user.cart = user.cart.filter(
-        (i) => !(i.product.toString() === productId && i.variant.toString() === variantId)
-      );
-    } else {
-      item.quantity = quantity;
-    }
-    await user.save();
-    sendSuccess(res, user.cart, 'Cart updated');
-  } else {
-    const cart = req.session.cart || [];
-    const item = cart.find(
-      (i) => i.product.toString() === productId && i.variant.toString() === variantId
-    );
-    if (!item) throw new AppError('Item not in cart', 404);
-    if (quantity < 1) {
-      req.session.cart = cart.filter(
-        (i) => !(i.product.toString() === productId && i.variant.toString() === variantId)
-      );
-    } else {
-      item.quantity = quantity;
-    }
-    sendSuccess(res, req.session.cart, 'Guest cart updated');
-  }
-}));
-
-router.delete('/remove/:productId/:variantId', optionalProtect, asyncHandler(async (req, res) => {
-  const { productId, variantId } = req.params;
-
-  if (req.user) {
-    await User.findByIdAndUpdate(req.user._id, {
-      $pull: { cart: { product: productId, variant: variantId } },
-    });
-    sendSuccess(res, {}, 'Item removed from cart');
-  } else {
-    req.session.cart = (req.session.cart || []).filter(
+  const user = await User.findById(req.user._id);
+  const item = user.cart?.find(
+    (i) => i.product.toString() === productId && i.variant.toString() === variantId
+  );
+  if (!item) throw new AppError('Item not in cart', 404);
+  if (quantity < 1) {
+    user.cart = user.cart.filter(
       (i) => !(i.product.toString() === productId && i.variant.toString() === variantId)
     );
-    sendSuccess(res, {}, 'Item removed from guest cart');
+  } else {
+    item.quantity = quantity;
   }
+  await user.save();
+  sendSuccess(res, user.cart, 'Cart updated');
 }));
 
-router.delete('/clear', optionalProtect, asyncHandler(async (req, res) => {
-  if (req.user) {
-    await User.findByIdAndUpdate(req.user._id, { $set: { cart: [] } });
-    sendSuccess(res, {}, 'Cart cleared');
-  } else {
-    req.session.cart = [];
-    sendSuccess(res, {}, 'Guest cart cleared');
-  }
+router.delete('/remove/:productId/:variantId', protect, asyncHandler(async (req, res) => {
+  const { productId, variantId } = req.params;
+  await User.findByIdAndUpdate(req.user._id, {
+    $pull: { cart: { product: productId, variant: variantId } },
+  });
+  sendSuccess(res, {}, 'Item removed from cart');
+}));
+
+router.delete('/clear', protect, asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.user._id, { $set: { cart: [] } });
+  sendSuccess(res, {}, 'Cart cleared');
 }));
 
 module.exports = router;

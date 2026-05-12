@@ -10,7 +10,7 @@ export const useAuthStore = create(
       logout: () => set({ user: null, isAuthenticated: false }),
     }),
     {
-      name: 'robomart-auth',
+      name: 'SparkTech-auth',
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
     }
   )

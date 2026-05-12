@@ -33,7 +33,7 @@ api.interceptors.response.use(
 
     // ── 1. Network error (server unreachable / offline) ──
     if (!error.response) {
-      toast.error('🔌 Network error — check your connection or the server is down.', {
+      toast.error('Network error — check your connection or the server is down.', {
         id: 'network-error',  // dedup: only one toast at a time
         duration: 5000,
       });
@@ -73,7 +73,7 @@ api.interceptors.response.use(
 
     // ── 3. 429 Rate limit ──
     if (status === 429) {
-      toast.error('⏳ Too many requests — please slow down and try again shortly.', {
+      toast.error('Too many requests — please slow down and try again shortly.', {
         id: 'rate-limit',
         duration: 5000,
       });
@@ -83,7 +83,7 @@ api.interceptors.response.use(
     // ── 4. 5xx Server errors → global toast with API message ──
     if (status >= 500) {
       const msg = error.response?.data?.message || 'Server error — please try again.';
-      toast.error(`🚨 ${msg}`, { id: `server-error-${status}`, duration: 6000 });
+      toast.error(msg, { id: `server-error-${status}`, duration: 6000 });
       return Promise.reject(error);
     }
 

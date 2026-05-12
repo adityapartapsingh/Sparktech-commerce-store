@@ -40,26 +40,19 @@ class ErrorBoundary extends React.Component {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
-        background: 'var(--bg-primary, #0A0A0F)',
-        fontFamily: 'Outfit, sans-serif',
+        background: 'var(--bg-primary, #0B0B12)',
+        fontFamily: 'Inter, sans-serif',
         gap: '1.5rem',
         textAlign: 'center',
       }}>
-        {/* Glow */}
-        <div style={{
-          position: 'fixed', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 500, height: 500, borderRadius: '50%', pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)',
-        }} />
-
-        <div style={{ fontSize: '4rem', lineHeight: 1 }}>⚡</div>
+        <img src="/images/error-robot.png" alt="Error" style={{ width: 160, opacity: 0.85 }} />
 
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary, #fff)', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, fontFamily: 'Outfit,sans-serif', color: 'var(--text-primary, #fff)', marginBottom: '0.5rem' }}>
             Something went wrong
           </h1>
-          <p style={{ color: 'var(--text-muted, #888)', fontSize: '1rem', maxWidth: 480 }}>
-            An unexpected error occurred while rendering this page. You can try reloading or go back to the home page.
+          <p style={{ color: 'var(--text-muted, #888)', fontSize: '0.95rem', maxWidth: 440 }}>
+            An unexpected error occurred. You can try reloading or go back to the home page.
           </p>
         </div>
 
@@ -70,12 +63,12 @@ class ErrorBoundary extends React.Component {
             border: '1px solid rgba(239,68,68,0.25)',
             borderRadius: 12,
             padding: '1.25rem 1.5rem',
-            maxWidth: 640,
+            maxWidth: 600,
             width: '100%',
             textAlign: 'left',
           }}>
-            <p style={{ color: '#ef4444', fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-              🛠 Development Error Details
+            <p style={{ color: '#ef4444', fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+              Development Error Details
             </p>
             <code style={{ fontSize: '0.8rem', color: '#fca5a5', whiteSpace: 'pre-wrap', wordBreak: 'break-word', display: 'block' }}>
               {this.state.error.toString()}
@@ -93,37 +86,11 @@ class ErrorBoundary extends React.Component {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.75rem 2rem',
-              borderRadius: 10,
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--accent-blue, #00d4ff), var(--accent-amber, #f59e0b))',
-              color: '#0A0A0F',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
             Reload Page
           </button>
-          <button
-            onClick={() => { this.handleReset(); window.location.href = '/'; }}
-            style={{
-              padding: '0.75rem 2rem',
-              borderRadius: 10,
-              border: '1px solid var(--border, #2a2a4a)',
-              background: 'var(--bg-elevated, #111)',
-              color: 'var(--text-primary, #fff)',
-              fontWeight: 600,
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
+          <button className="btn btn-outline" onClick={() => { this.handleReset(); window.location.href = '/'; }}>
             Go to Home
           </button>
         </div>

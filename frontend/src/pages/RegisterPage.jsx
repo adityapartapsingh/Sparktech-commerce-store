@@ -52,11 +52,11 @@ const RegisterPage = () => {
     onSuccess: (res) => {
       setUserId(res.data.data.userId);
       setStep('otp');
-      toast.success('✅ Verification code sent! Check your backend terminal.');
+      toast.success('Verification code sent! Check your backend terminal.');
     },
     onError: (err) => {
       const msg = err.response?.data?.message || 'Registration failed';
-      toast.error(`❌ ${msg}`);
+      toast.error(msg);
     },
   });
 
@@ -68,12 +68,12 @@ const RegisterPage = () => {
     }),
     onSuccess: (res) => {
       setUser(res.data.data);
-      toast.success('🎉 Account verified! Welcome to RoboMart ⚡');
+      toast.success('Account verified! Welcome to SparkTech');
       navigate('/');
     },
     onError: (err) => {
       const msg = err.response?.data?.message || 'Verification failed';
-      toast.error(`❌ ${msg}`);
+      toast.error(msg);
     },
   });
 
@@ -109,32 +109,25 @@ const RegisterPage = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <Helmet>
-        <title>Create Account | RoboMart</title>
-        <meta name="description" content="Join RoboMart to purchase premium electronic components." />
+        <title>Create Account | SparkTech</title>
+        <meta name="description" content="Join SparkTech to purchase premium electronic components." />
       </Helmet>
 
-      <div style={{
-        position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
-        width: 600, height: 600, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', maxWidth: 500 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', maxWidth: 480 }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', marginBottom: '1.5rem' }}>
-            <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, var(--accent-blue, #00d4ff), var(--accent-amber, #f59e0b))', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Zap size={22} color="#0A0A0F" fill="#0A0A0F" />
+            <div style={{ width: 36, height: 36, background: 'var(--accent-blue)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={18} color="#fff" />
             </div>
-            <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: '1.5rem' }}>
-              <span style={{ color: 'var(--accent-blue, #00d4ff)' }}>Robo</span><span style={{ color: 'var(--text-primary, #fff)' }}>Mart</span>
+            <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-primary)' }}>
+              SparkTech
             </span>
           </Link>
           <h1 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.8rem', marginBottom: '0.4rem', color: 'var(--text-primary, #fff)' }}>
-            {step === 'otp' ? '🔐 Secure Verification' : 'Create account'}
+            {step === 'otp' ? 'Secure Verification' : 'Create account'}
           </h1>
           <p style={{ color: 'var(--text-muted, #888)', fontSize: '0.95rem' }}>
             {step === 'otp' ? 'Enter the verification code sent to your email' : 'Join 50,000+ makers and engineers'}
@@ -190,7 +183,7 @@ const RegisterPage = () => {
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.875rem', fontSize: '1rem' }} disabled={registerMutation.isPending}>
-                {registerMutation.isPending ? '⏳ Sending code…' : 'Continue to Verification ⚡'}
+                {registerMutation.isPending ? 'Sending code…' : 'Continue to Verification'}
               </button>
 
               {/* Divider */}
@@ -229,7 +222,7 @@ const RegisterPage = () => {
               </div>
 
               <div style={{ background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 10, padding: '0.875rem', fontSize: '0.85rem', color: 'var(--text-secondary, #ccc)', lineHeight: 1.6 }}>
-                📋 <strong>Development Mode:</strong> OTPs are printed to the <strong>backend Node.js terminal</strong>.<br/>
+                <strong>Development Mode:</strong> OTPs are printed to the <strong>backend Node.js terminal</strong>.<br/>
                 Look for lines like: <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4 }}>[MOCK EMAIL SERVICE] → Sent OTP [123456]</code>
               </div>
 
@@ -250,7 +243,7 @@ const RegisterPage = () => {
               )}
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.875rem', fontSize: '1rem' }} disabled={verifyMutation.isPending}>
-                {verifyMutation.isPending ? '⏳ Verifying…' : '🔓 Verify & Create Account'}
+                {verifyMutation.isPending ? 'Verifying...' : 'Verify & Create Account'}
               </button>
 
               <button type="button" onClick={() => setStep('register')} style={{ background: 'none', border: 'none', color: 'var(--text-muted, #888)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'center' }}>

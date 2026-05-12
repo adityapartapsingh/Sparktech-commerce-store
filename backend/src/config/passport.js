@@ -6,6 +6,10 @@ const User = require('../models/User.model');
 // ============================================
 // GOOGLE OAUTH STRATEGY
 // ============================================
+// Production setup:
+//   1. Set BACKEND_URL in .env to your deployed URL (e.g. https://api.SparkTech.com)
+//   2. In Google Cloud Console → Credentials → OAuth 2.0 Client:
+//      Add authorized redirect URI: {BACKEND_URL}/api/v1/auth/google/callback
 passport.use(
   new GoogleStrategy(
     {
@@ -52,6 +56,10 @@ passport.use(
 // ============================================
 // GITHUB OAUTH STRATEGY
 // ============================================
+// Production setup:
+//   1. Set BACKEND_URL in .env to your deployed URL
+//   2. In GitHub → Settings → Developer settings → OAuth Apps:
+//      Set Authorization callback URL: {BACKEND_URL}/api/v1/auth/github/callback
 passport.use(
   new GitHubStrategy(
     {

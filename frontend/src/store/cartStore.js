@@ -86,7 +86,7 @@ export const useCartStore = create(
         get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
     {
-      name: 'robomart-cart',
+      name: 'SparkTech-cart',
       partialize: (state) => ({ items: state.items }),
     }
   )

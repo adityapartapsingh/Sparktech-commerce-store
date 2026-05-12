@@ -1,11 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../../models/Order.model');
+const Product = require('../../models/Product.model');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const { protect } = require('../../middleware/auth.middleware');
 const { authorize } = require('../../middleware/rbac.middleware');
+const validate = require('../../middleware/validate.middleware');
+const { CancelOrderSchema, ReturnOrderSchema, UpdateOrderStatusSchema, UpdateDeliverySchema } = require('../schemas');
 const AppError = require('../../utils/AppError');
+const User = require('../../models/User.model');
+const logger = require('../../utils/logger');
+const { sendCancellationSMS, sendShippedSMS } = require('../../utils/sms.service');
 
 // Customer: get own orders
 router.get('/my', protect, asyncHandler(async (req, res) => {
@@ -40,7 +46,7 @@ router.get('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async (
 }));
 
 // Admin: update order status
-router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
+router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), validate(UpdateOrderStatusSchema), asyncHandler(async (req, res) => {
   const { status, trackingNumber } = req.body;
   const order = await Order.findByIdAndUpdate(
     req.params.id,
@@ -52,7 +58,7 @@ router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), asyncHan
 }));
 
 // Customer: cancel order (only before shipping)
-router.post('/:id/cancel', protect, asyncHandler(async (req, res) => {
+router.post('/:id/cancel', protect, validate(CancelOrderSchema), asyncHandler(async (req, res) => {
   const { reason, comment } = req.body;
   const order = await Order.findById(req.params.id);
   if (!order) throw new AppError('Order not found', 404);
@@ -72,11 +78,29 @@ router.post('/:id/cancel', protect, asyncHandler(async (req, res) => {
   order.cancellationReason = reason ? (comment ? `${reason} — ${comment}` : reason) : 'No reason provided';
   order.cancelledAt = new Date();
   await order.save();
+
+  // Re-increment stock for each item in the cancelled order
+  await Promise.all(
+    order.items.map((item) =>
+      Product.findOneAndUpdate(
+        { _id: item.product, 'variants._id': item.variant },
+        { $inc: { 'variants.$.stock': item.quantity } }
+      )
+    )
+  );
+
+  // Send cancellation SMS (non-blocking)
+  const cancelUser = await User.findById(order.user).select('phone');
+  if (cancelUser?.phone) {
+    sendCancellationSMS(cancelUser.phone, order._id)
+      .catch((e) => logger.error(`Cancel SMS failed: ${e.message}`));
+  }
+
   sendSuccess(res, { orderId: order._id }, 'Order cancelled successfully');
 }));
 
 // Customer: request return / replacement
-router.post('/:id/return', protect, asyncHandler(async (req, res) => {
+router.post('/:id/return', protect, validate(ReturnOrderSchema), asyncHandler(async (req, res) => {
   const { type, reason, description, itemsAffected, preferredResolution, contactPhone, bankAccount } = req.body;
   if (!reason) throw new AppError('Reason is required', 400);
   if (!description || description.length < 20) throw new AppError('Please provide at least 20 characters describing the issue', 400);
@@ -128,6 +152,13 @@ router.put('/:id/delivery', protect, authorize('admin', 'masteradmin'), asyncHan
     { $set: updateData },
     { new: true, runValidators: true }
   );
+
+  // Send shipped SMS with tracking info (non-blocking)
+  const orderUser = await User.findById(order.user).select('phone');
+  if (orderUser?.phone) {
+    sendShippedSMS(orderUser.phone, order._id, trackingNumber, provider)
+      .catch((e) => logger.error(`Shipped SMS failed: ${e.message}`));
+  }
 
   sendSuccess(res, updatedOrder, 'Delivery information updated successfully');
 }));

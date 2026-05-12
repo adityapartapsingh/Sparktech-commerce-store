@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { Filter, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../lib/axios';
 import ProductCard from '../features/products/components/ProductCard';
+import FallbackState from '../components/ui/FallbackState';
 
 const SORT_OPTIONS = [
   { label: 'Newest', value: 'newest' },
@@ -54,7 +55,7 @@ const ProductListPage = () => {
   return (
     <div style={{ paddingTop: '5rem' }}>
       <Helmet>
-        <title>All Products & Components | RoboMart</title>
+        <title>All Products & Components | SparkTech</title>
         <meta name="description" content="Browse our entire catalog of microcontrollers, sensors, actuators, and power modules. Filter by category, brand, and price." />
       </Helmet>
       
@@ -107,11 +108,13 @@ const ProductListPage = () => {
             {Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 320 }} />)}
           </div>
         ) : data?.products?.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '5rem 0' }}>
-            <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</p>
-            <h3 style={{ marginBottom: '0.5rem' }}>No products found</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Try adjusting your filters</p>
-            <button className="btn btn-primary" onClick={() => setSearchParams({})}>Clear All Filters</button>
+          <div style={{ padding: '3rem 0' }}>
+            <FallbackState
+              type="search"
+              title="No products found"
+              message="Try adjusting your filters or search terms to find what you're looking for."
+              onRetry={() => setSearchParams({})}
+            />
           </div>
         ) : (
           <motion.div layout className="product-grid">
@@ -168,7 +171,7 @@ const ProductListPage = () => {
                 <p style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</p>
                 {(categoriesData || []).map((cat) => (
                   <button key={cat.slug} onClick={() => { setParam('category', cat.slug); setFiltersOpen(false); }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.75rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginBottom: 4, background: category === cat.slug ? 'rgba(0,212,255,0.1)' : 'transparent', color: category === cat.slug ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 0.75rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginBottom: 4, background: category === cat.slug ? 'rgba(59,130,246,0.1)' : 'transparent', color: category === cat.slug ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
                     {cat.name}
                   </button>
                 ))}

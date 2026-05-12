@@ -19,17 +19,16 @@ const ProductCard = ({ product }) => {
 
     const previous = useCartStore.getState().items;
     addItem(product, defaultVariant, 1); // Optimistic
-    toast.success(`${product.name} added to cart ⚡`);
+    toast.success(`${product.name} added to cart`);
 
     try {
-      const response = await api.post('/cart/add', {
+      await api.post('/cart/add', {
         productId: product._id,
         variantId: defaultVariant._id,
         quantity: 1,
       });
       if (!isAuthenticated) {
         toast('Login to save your cart permanently!', {
-          icon: '🔐',
           duration: 4000,
         });
       }
@@ -81,7 +80,7 @@ const ProductCard = ({ product }) => {
             )}
             {product.isFeatured && (
               <span className="badge badge-amber" style={{ position: 'absolute', top: 10, left: 10 }}>
-                ⚡ Featured
+                Featured
               </span>
             )}
             {defaultVariant?.stock === 0 && (

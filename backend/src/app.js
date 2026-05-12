@@ -1,13 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+const session = require('express-session');
+const RedisStore = require('connect-redis').default;
 const cookieParser = require('cookie-parser');
 const { apiLimiter } = require('./middleware/rateLimit.middleware');
 const errorHandler = require('./middleware/errorHandler.middleware');
 const logger = require('./utils/logger');
 const passport = require('passport');
+const mongoose = require('mongoose');
+const { getRedis } = require('./config/redis');
 
 require('./config/passport'); // Initialize strategies
 
@@ -55,10 +57,58 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // ==========================
+//  Session (Redis-backed)
+// ==========================
+const redisClient = getRedis();
+if (redisClient) {
+  app.use(session({
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET || 'SparkTech_session_secret_change_in_prod',
+    resave: false,
+    saveUninitialized: false,
+    name: 'SparkTech.sid',
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }));
+} else {
+  // Fallback: in-memory session (dev only, won't persist across restarts)
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'SparkTech_session_secret_change_in_prod',
+    resave: false,
+    saveUninitialized: false,
+    name: 'SparkTech.sid',
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+  }));
+}
+
+// ==========================
 //  Sanitization
 // ==========================
-// app.use(mongoSanitize()); // Disabled to fix req.query TypeError
-// app.use(xss());        // Removed because xss-clean is unmaintained and throws TypeError on req.query
+// express-mongo-sanitize is incompatible with Express 5 (req.query is read-only).
+// Custom lightweight sanitizer for req.body + req.params only.
+// All user input is also validated via Zod schemas on each route.
+const sanitize = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$')) { delete obj[key]; continue; }
+    if (typeof obj[key] === 'object') sanitize(obj[key]);
+  }
+  return obj;
+};
+app.use((req, res, next) => {
+  if (req.body) sanitize(req.body);
+  if (req.params) sanitize(req.params);
+  next();
+});
 
 // ==========================
 //  Rate Limiting
@@ -68,7 +118,18 @@ app.use('/api', apiLimiter);
 // ==========================
 //  Health Check
 // ==========================
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get('/health', (req, res) => {
+  const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const redis = getRedis();
+  const redisStatus = redis?.status === 'ready' ? 'connected' : 'disconnected';
+  const isHealthy = mongoStatus === 'connected';
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'ok' : 'degraded',
+    time: new Date().toISOString(),
+    services: { mongo: mongoStatus, redis: redisStatus },
+  });
+});
 
 // ==========================
 //  API Routes
@@ -81,6 +142,7 @@ app.use('/api/v1/cart',       require('./modules/cart/cart.routes'));
 app.use('/api/v1/orders',     require('./modules/orders/orders.routes'));
 app.use('/api/v1/payments',   require('./modules/payments/payments.routes'));
 app.use('/api/v1/reviews',    require('./modules/reviews/reviews.routes'));
+app.use('/api/v1/wishlist',   require('./modules/wishlist/wishlist.routes'));
 app.use('/api/v1/admin',      require('./modules/admin/admin.routes'));
 
 // ==========================

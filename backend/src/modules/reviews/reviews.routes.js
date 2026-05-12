@@ -4,6 +4,8 @@ const Review = require('../../models/Review.model');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const { protect } = require('../../middleware/auth.middleware');
+const validate = require('../../middleware/validate.middleware');
+const { CreateReviewSchema } = require('../schemas');
 const AppError = require('../../utils/AppError');
 
 router.get('/product/:productId', asyncHandler(async (req, res) => {
@@ -13,7 +15,7 @@ router.get('/product/:productId', asyncHandler(async (req, res) => {
   sendSuccess(res, reviews, 'Reviews fetched');
 }));
 
-router.post('/', protect, asyncHandler(async (req, res) => {
+router.post('/', protect, validate(CreateReviewSchema), asyncHandler(async (req, res) => {
   const existing = await Review.findOne({ product: req.body.productId, user: req.user._id });
   if (existing) throw new AppError('You have already reviewed this product', 409);
 

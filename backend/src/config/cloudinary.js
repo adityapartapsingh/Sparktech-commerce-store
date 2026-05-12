@@ -10,7 +10,7 @@ cloudinary.config({
 const productImageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: 'robomart/products',
+    folder: 'SparkTech/products',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [{ width: 1200, crop: 'limit', quality: 'auto', fetch_format: 'auto' }],
   },
@@ -19,7 +19,7 @@ const productImageStorage = new CloudinaryStorage({
 const datasheetStorage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: 'robomart/datasheets',
+    folder: 'SparkTech/datasheets',
     allowed_formats: ['pdf'],
     resource_type: 'raw',
   },

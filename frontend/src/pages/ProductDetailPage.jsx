@@ -9,12 +9,14 @@ import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
+  const { items: recentItems, addItem: addRecent } = useRecentlyViewed();
 
   const [activeImage, setActiveImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -37,11 +39,6 @@ const ProductDetailPage = () => {
       const res = await api.get(`/products/${slug}`);
       return res.data.data;
     },
-    onSuccess: (data) => {
-      if (data?.variants?.length > 0 && !selectedVariant) {
-        setSelectedVariant(data.variants[0]);
-      }
-    }
   });
 
   // Ensure selected variant is set when data loads if not set in onSuccess
@@ -49,7 +46,8 @@ const ProductDetailPage = () => {
     if (product && !selectedVariant && product.variants?.length > 0) {
       setSelectedVariant(product.variants[0]);
     }
-  }, [product, selectedVariant]);
+    if (product) addRecent(product);
+  }, [product, selectedVariant, addRecent]);
 
   if (isLoading) {
     return (
@@ -101,9 +99,9 @@ const ProductDetailPage = () => {
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
       <Helmet>
-        <title>{product.name} | RoboMart</title>
+        <title>{product.name} | SparkTech</title>
         <meta name="description" content={product.shortDescription || (product.description?.substring(0, 150) + '...')} />
-        <meta property="og:title" content={`${product.name} - RoboMart`} />
+        <meta property="og:title" content={`${product.name} - SparkTech`} />
         {images[0] && <meta property="og:image" content={images[0]} />}
       </Helmet>
       
@@ -137,7 +135,7 @@ const ProductDetailPage = () => {
               </div>
             )}
             {product.isFeatured && (
-              <span className="badge badge-amber" style={{ position: 'absolute', top: 16, left: 16 }}>⚡ Featured</span>
+              <span className="badge badge-amber" style={{ position: 'absolute', top: 16, left: 16 }}>Featured</span>
             )}
           </div>
           
@@ -321,8 +319,8 @@ const ProductDetailPage = () => {
                       background: i % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-card)',
                       borderBottom: i !== product.attributes.length - 1 ? '1px solid var(--border)' : 'none'
                     }}>
-                      <div style={{ width: '40%', fontWeight: 600, color: 'var(--text-primary)' }}>{attr.name}</div>
-                      <div style={{ width: '60%', color: 'var(--text-secondary)' }}>{attr.value}</div>
+                      <div style={{ width: '40%', fontWeight: 600, color: 'var(--text-primary)' }}>{attr.key}</div>
+                      <div style={{ width: '60%', color: 'var(--text-secondary)' }}>{attr.value}{attr.unit ? ` ${attr.unit}` : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -425,6 +423,45 @@ const ProductDetailPage = () => {
         )}
       </AnimatePresence>
 
+      {/* Recently Viewed */}
+      {recentItems.filter(r => r._id !== product._id).length > 0 && (
+        <div style={{ paddingBottom: '4rem' }}>
+          <h3 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>Recently Viewed</h3>
+          <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            {recentItems.filter(r => r._id !== product._id).slice(0, 6).map(item => (
+              <div
+                key={item._id}
+                onClick={() => navigate(`/products/${item.slug}`)}
+                style={{
+                  minWidth: 180, maxWidth: 200, cursor: 'pointer',
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)', overflow: 'hidden',
+                  transition: 'border-color 0.2s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <div style={{ height: 140, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Zap size={32} color="var(--border)" />
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '0.75rem' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                  <p style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '0.95rem', marginTop: '0.25rem', color: 'var(--accent-blue)' }}>
+                    ₹{item.price?.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

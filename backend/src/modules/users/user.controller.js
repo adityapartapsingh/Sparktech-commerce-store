@@ -1,6 +1,7 @@
 const User = require('../../models/User.model');
 const Order = require('../../models/Order.model');
 const asyncHandler = require('../../utils/asyncHandler');
+const AppError = require('../../utils/AppError');
 const { sendSuccess } = require('../../utils/apiResponse');
 
 exports.getAllCustomers = asyncHandler(async (req, res) => {
@@ -43,3 +44,66 @@ exports.getAllCustomers = asyncHandler(async (req, res) => {
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
   }, 'Customers fetched');
 });
+
+// ── Update Profile (name, phone) ────────────────────────
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const { name, phone } = req.body;
+  const updates = {};
+
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone || undefined; // empty string → remove
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: updates },
+    { new: true, runValidators: true }
+  ).select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
+
+  if (!user) throw new AppError('User not found', 404);
+  sendSuccess(res, user, 'Profile updated');
+});
+
+// ── Add Address ─────────────────────────────────────────
+exports.addAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
+
+  if (!user) throw new AppError('User not found', 404);
+  if (user.addresses.length >= 10) {
+    throw new AppError('Maximum 10 addresses allowed', 400);
+  }
+
+  user.addresses.push(req.body);
+  await user.save();
+
+  sendSuccess(res, user, 'Address added', 201);
+});
+
+// ── Update Address ──────────────────────────────────────
+exports.updateAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
+
+  if (!user) throw new AppError('User not found', 404);
+
+  const addr = user.addresses.id(req.params.addressId);
+  if (!addr) throw new AppError('Address not found', 404);
+
+  Object.assign(addr, req.body);
+  await user.save();
+
+  sendSuccess(res, user, 'Address updated');
+});
+
+// ── Delete Address ──────────────────────────────────────
+exports.deleteAddress = asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { addresses: { _id: req.params.addressId } } },
+    { new: true }
+  ).select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
+
+  if (!user) throw new AppError('User not found', 404);
+  sendSuccess(res, user, 'Address deleted');
+});
+

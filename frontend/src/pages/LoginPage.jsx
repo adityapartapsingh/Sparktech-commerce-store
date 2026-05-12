@@ -29,16 +29,16 @@ const LoginPage = () => {
       setUser(res.data.data);
       // Fetch updated cart after login (merges guest cart)
       await useCartStore.getState().fetchCart();
-      toast.success(`🎉 Welcome back, ${res.data.data.name}! ⚡`);
+      toast.success(`Welcome back, ${res.data.data.name}!`);
       const role = res.data.data.role;
       navigate((role === 'admin' || role === 'masteradmin') ? '/admin/dashboard' : '/');
     },
     onError: (err) => {
       const status = err.response?.status;
       const msg = err.response?.data?.message || 'Login failed';
-      if (status === 403) toast.error('⚠️ Account not verified. Please register again to get a new OTP.');
-      else if (status === 401) toast.error('❌ Invalid email/phone or password.');
-      else toast.error(`❌ ${msg}`);
+      if (status === 403) toast.error('Account not verified. Please register again to get a new OTP.');
+      else if (status === 401) toast.error('Invalid email/phone or password.');
+      else toast.error(msg);
     },
   });
 
@@ -46,27 +46,25 @@ const LoginPage = () => {
   const handleGithubAuth = () => window.location.href = `${API_BASE}/auth/github`;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <Helmet>
-        <title>Login | RoboMart</title>
-        <meta name="description" content="Sign in to your RoboMart account to track orders, manage addresses, and access exclusive hardware deals." />
+        <title>Login | SparkTech</title>
+        <meta name="description" content="Sign in to your SparkTech account to track orders, manage addresses, and access exclusive hardware deals." />
       </Helmet>
-      {/* Background glow */}
-      <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translate(-50%,-50%)', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle, rgba(0,212,255,0.04) 0%, transparent 70%)', pointerEvents:'none' }} />
 
-      <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} style={{ width: '100%', maxWidth: 440 }}>
+      <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} style={{ width: '100%', maxWidth: 420 }}>
         {/* Logo */}
         <div style={{ textAlign:'center', marginBottom:'2rem' }}>
           <Link to="/" style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', textDecoration:'none', marginBottom:'1.5rem' }}>
-            <div style={{ width:40, height:40, background:'linear-gradient(135deg, var(--accent-blue), var(--accent-amber))', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Zap size={22} color="#0A0A0F" fill="#0A0A0F" />
+            <div style={{ width:36, height:36, background:'var(--accent-blue)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Zap size={18} color="#fff" />
             </div>
-            <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:800, fontSize:'1.5rem' }}>
-              <span className="gradient-text">Robo</span><span style={{ color:'var(--text-primary)' }}>Mart</span>
+            <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.3rem', color:'var(--text-primary)' }}>
+              SparkTech
             </span>
           </Link>
-          <h1 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.8rem', marginBottom:'0.4rem' }}>Welcome back</h1>
-          <p style={{ color:'var(--text-muted)', fontSize:'0.95rem' }}>Sign in to your account</p>
+          <h1 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.6rem', marginBottom:'0.4rem' }}>Welcome back</h1>
+          <p style={{ color:'var(--text-muted)', fontSize:'0.9rem' }}>Sign in to your account</p>
         </div>
 
         <div className="card" style={{ padding:'2rem' }}>
@@ -91,7 +89,7 @@ const LoginPage = () => {
             </div>
 
             <button type="submit" className="btn btn-primary" style={{ width:'100%', padding:'0.875rem', fontSize:'1rem', marginTop:'0.5rem' }} disabled={mutation.isPending}>
-              {mutation.isPending ? 'Signing in…' : 'Sign In ⚡'}
+              {mutation.isPending ? 'Signing in…' : 'Sign In'}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', margin: '0.5rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>

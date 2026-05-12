@@ -78,7 +78,7 @@ const OrderTimeline = ({ status }) => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: done ? 'var(--accent-green)' : active ? 'var(--accent-blue)' : 'var(--bg-elevated)',
                 border: `2px solid ${done ? 'var(--accent-green)' : active ? 'var(--accent-blue)' : 'var(--border)'}`,
-                boxShadow: active ? '0 0 12px rgba(0,212,255,0.4)' : 'none',
+                boxShadow: active ? '0 0 0 4px rgba(59,130,246,0.2)' : 'none',
                 transition: 'all 0.3s ease',
               }}>
                 {done

@@ -159,7 +159,7 @@ const AdminDashboard = () => {
             </div>
             <div>
               <label className="form-label" style={{ fontSize: '0.8rem' }}>Email Address</label>
-              <input type="email" className="form-input" required value={adminForm.email} onChange={e => setAdminForm({...adminForm, email: e.target.value})} placeholder="jane@robomart.com" />
+              <input type="email" className="form-input" required value={adminForm.email} onChange={e => setAdminForm({...adminForm, email: e.target.value})} placeholder="jane@SparkTech.com" />
             </div>
             <div>
               <label className="form-label" style={{ fontSize: '0.8rem' }}>Initial Password</label>

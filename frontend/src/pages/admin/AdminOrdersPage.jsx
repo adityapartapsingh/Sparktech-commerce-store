@@ -129,7 +129,7 @@ const AdminOrdersPage = () => {
         o.status,
         o.items?.length || 0,
       ]);
-      await exportData({ format, filename: 'robomart_orders', title: 'RoboMart â€” Orders Report', headers, rows });
+      await exportData({ format, filename: 'SparkTech_orders', title: 'SparkTech — Orders Report', headers, rows });
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch (e) {
       toast.error('Export failed');
@@ -171,12 +171,12 @@ const AdminOrdersPage = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
           >
             <Download size={16} />
-            {exporting ? 'Exportingâ€¦' : 'Export'}
+            {exporting ? 'Exporting…' : 'Export'}
             <ChevronDown size={14} />
           </button>
           {exportOpen && (
             <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', minWidth: 160, zIndex: 50, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
-              {[['excel', 'ðŸ“Š Excel (.xlsx)'], ['csv', 'ðŸ“‹ CSV']].map(([fmt, label]) => (
+              {[['excel', 'Excel (.xlsx)'], ['csv', 'CSV']].map(([fmt, label]) => (
                 <button key={fmt} onClick={() => handleExport(fmt)} style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}>
@@ -266,7 +266,7 @@ const AdminOrdersPage = () => {
                   </td>
                   
                   <td style={{ padding: '1rem 0' }}>
-                     <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>â‚¹{order.totalAmount?.toLocaleString('en-IN')}</div>
+                     <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>₹{order.totalAmount?.toLocaleString('en-IN')}</div>
                      {order.paymentInfo?.method === 'razorpay' ? (
                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#3395FF', border: '1px solid currentColor', padding: '1px 6px', borderRadius: 4, display: 'inline-block', marginTop: 4 }}>RAZORPAY</span>
                      ) : (
@@ -359,7 +359,7 @@ const AdminOrdersPage = () => {
         </div>
       </div>
 
-      {/* Invoice Modal â€” admin with download + print */}
+      {/* Invoice Modal — admin with download + print */}
       <AnimatePresence>
         {invoiceOrder && (
           <motion.div key="invoice" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

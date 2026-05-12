@@ -124,7 +124,7 @@ const AdminLogsPage = () => {
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--accent-amber)' }} />
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--accent-green)' }} />
           <p style={{ marginLeft: '1rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontFamily: 'JetBrains Mono, monospace' }}>
-            robomart@server:~/{logType === 'error' ? 'error.log' : 'combined.log'} — tail -n {limit}
+            SparkTech@server:~/{logType === 'error' ? 'error.log' : 'combined.log'} — tail -n {limit}
           </p>
         </div>
 

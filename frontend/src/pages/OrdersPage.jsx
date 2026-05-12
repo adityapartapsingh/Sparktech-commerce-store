@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PackageOpen, Clock, CheckCircle2, Truck, XCircle,
   ChevronRight, FileText, RotateCcw, X, ExternalLink,
+  CreditCard, RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -173,7 +175,7 @@ const ReturnModal = ({ order, onClose }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)', position: 'sticky', top: 0, zIndex: 1 }}>
           <div>
             <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.15rem' }}>
-              {type === 'return' ? '📦 Return Request' : '🔄 Replacement Request'}
+              {type === 'return' ? 'Return Request' : 'Replacement Request'}
             </h2>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
               Order #{order._id.slice(-8).toUpperCase()} · Step {step} of 2
@@ -198,12 +200,12 @@ const ReturnModal = ({ order, onClose }) => {
                 <label className="form-label" style={{ marginBottom: '0.6rem', display: 'block' }}>What do you want to do?</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   {[
-                    { id: 'return', emoji: '📦', title: 'Return', desc: 'Send back & get a refund' },
-                    { id: 'replacement', emoji: '🔄', title: 'Replacement', desc: 'Swap for a working unit' },
+                    { id: 'return', icon: PackageOpen, title: 'Return', desc: 'Send back & get a refund' },
+                    { id: 'replacement', icon: RefreshCw, title: 'Replacement', desc: 'Swap for a working unit' },
                   ].map(opt => (
                     <button key={opt.id} type="button" onClick={() => setType(opt.id)}
                       style={{ padding: '1rem', borderRadius: 'var(--radius-md)', border: `2px solid ${type === opt.id ? 'var(--accent-blue)' : 'var(--border)'}`, background: type === opt.id ? 'rgba(0,212,255,0.07)' : 'var(--bg-elevated)', cursor: 'pointer', textAlign: 'left' }}>
-                      <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{opt.emoji}</div>
+                      <div style={{ marginBottom: '0.3rem', color: type === opt.id ? 'var(--accent-blue)' : 'var(--text-muted)' }}><opt.icon size={24} /></div>
                       <p style={{ fontWeight: 700, color: type === opt.id ? 'var(--accent-blue)' : 'var(--text-primary)', fontSize: '0.95rem' }}>{opt.title}</p>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{opt.desc}</p>
                     </button>
@@ -253,7 +255,7 @@ const ReturnModal = ({ order, onClose }) => {
                 <span><strong>Type:</strong> {type.charAt(0).toUpperCase() + type.slice(1)}</span>
                 <span><strong>Reason:</strong> {reason}</span>
                 <span><strong>Items:</strong> {selectedItems.length}</span>
-                <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}>✏️ Edit</button>
+                <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}>Edit</button>
               </div>
 
               {/* Detailed description */}
@@ -340,6 +342,10 @@ const OrdersPage = () => {
 
   return (
     <div className="container" style={{ padding: '3rem 1rem', minHeight: '80vh' }}>
+      <Helmet>
+        <title>My Orders | SparkTech</title>
+        <meta name="description" content="View and manage your SparkTech orders, track shipments, and request returns." />
+      </Helmet>
       <div style={{ marginBottom: '2.5rem' }}>
         <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '2.2rem', marginBottom: '0.5rem' }}>Your Orders</h1>
         <p style={{ color: 'var(--text-secondary)' }}>Welcome back, {user?.name || 'Customer'}. Here is your order history.</p>
@@ -377,7 +383,9 @@ const OrdersPage = () => {
                     </div>
                     <div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Payment</p>
-                      <p style={{ fontSize: '0.85rem', fontWeight: 500 }}>{order.paymentInfo?.method === 'cod' ? '🚚 COD' : '💳 Razorpay'}</p>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                {order.paymentInfo?.method === 'cod' ? <><Truck size={14} /> COD</> : <><CreditCard size={14} /> Razorpay</>}
+              </p>
                     </div>
                     <div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Order ID</p>
@@ -425,7 +433,7 @@ const OrdersPage = () => {
                   const statusCfg = {
                     pending:      { label: 'Submitted',    color: 'var(--accent-amber)',  bg: 'rgba(255,184,0,0.08)',  border: 'rgba(255,184,0,0.3)',  step: 0 },
                     under_review: { label: 'Under Review', color: 'var(--accent-blue)',   bg: 'rgba(0,212,255,0.07)', border: 'rgba(0,212,255,0.25)', step: 1 },
-                    approved:     { label: 'Approved ✓',   color: 'var(--accent-green)',  bg: 'rgba(16,185,129,0.08)',border: 'rgba(16,185,129,0.3)', step: 2 },
+                    approved:     { label: 'Approved',      color: 'var(--accent-green)',  bg: 'rgba(16,185,129,0.08)',border: 'rgba(16,185,129,0.3)', step: 2 },
                     rejected:     { label: 'Rejected',     color: 'var(--accent-red)',    bg: 'rgba(239,68,68,0.07)', border: 'rgba(239,68,68,0.25)',step: 2 },
                     completed:    { label: 'Completed',    color: 'var(--text-muted)',    bg: 'var(--bg-secondary)',   border: 'var(--border)',        step: 3 },
                   };
@@ -436,7 +444,7 @@ const OrdersPage = () => {
                       {/* Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                         <p style={{ fontWeight: 700, fontSize: '0.9rem', color: cfg.color }}>
-                          {rr.type === 'replacement' ? '🔄' : '📦'} {typeName} Request
+                          {typeName} Request
                         </p>
                         <span style={{ padding: '0.2rem 0.7rem', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, color: cfg.color, border: `1px solid ${cfg.border}` }}>
                           {cfg.label}
@@ -517,7 +525,7 @@ const OrdersPage = () => {
                       <button
                         onClick={() => {
                           if (order.status !== 'delivered') {
-                            toast('Return/replacement is available after your order is delivered', { icon: 'ℹ️' });
+                            toast('Return/replacement is available after your order is delivered');
                             return;
                           }
                           setReturnOrder(order);

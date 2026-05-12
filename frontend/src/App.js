@@ -9,11 +9,13 @@ import { HelmetProvider } from 'react-helmet-async';
 
 import { queryClient } from './lib/queryClient';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import CartDrawer from './features/cart/CartDrawer';
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import FallbackState from './components/ui/FallbackState';
 import './index.css';
 
 // Lazy-loaded pages
@@ -31,14 +33,21 @@ const AdminLogsPage      = lazy(() => import('./pages/admin/AdminLogsPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const LoginPage    = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
 // Placeholder pages (you can build these out next)
 const NotFoundPage = () => (
-  <div style={{ minHeight:'80vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1rem' }}>
-    <p style={{ fontSize:'5rem' }}>⚡</p>
-    <h1 style={{ fontFamily:'Outfit,sans-serif', fontWeight:800, fontSize:'2.5rem' }}>404 — Page Not Found</h1>
-    <p style={{ color:'var(--text-muted)' }}>The component you're looking for doesn't exist.</p>
-    <a href="/" className="btn btn-primary">Back to Home</a>
+  <div style={{ minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <FallbackState
+      type="error"
+      title="404 — Page Not Found"
+      message="The page you're looking for doesn't exist or has been moved."
+      action={{ label: 'Back to Home', to: '/' }}
+    />
   </div>
 );
 
@@ -69,9 +78,7 @@ const PageTransition = ({ children }) => (
 
 const PageFallback = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', flexDirection:'column', gap:'1rem' }}>
-    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-      style={{ width:40, height:40, borderRadius:'50%', border:'3px solid var(--border)', borderTopColor:'var(--accent-blue)' }}
-    />
+    <div className="spinner-lg" style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--accent-blue)', animation: 'spin 0.7s linear infinite' }} />
     <p style={{ color:'var(--text-muted)', fontSize:'0.9rem' }}>Loading…</p>
   </div>
 );
@@ -88,6 +95,10 @@ const AppLayout = ({ children, noLayout }) => (
 
 function AppRoutes() {
   const location = useLocation();
+  const { initTheme } = useThemeStore();
+
+  // Initialize theme on mount
+  useEffect(() => { initTheme(); }, [initTheme]);
 
   // Listen for auth:logout event from Axios interceptor
   const { logout } = useAuthStore();
@@ -100,12 +111,12 @@ function AppRoutes() {
       const msg = event.reason?.message || 'An unexpected error occurred';
       // Don't re-toast errors already handled by axios interceptor
       if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('401')) return;
-      toast.error(`⚠️ ${msg}`, { id: 'unhandled-rejection', duration: 5000 });
+      toast.error(msg, { id: 'unhandled-rejection', duration: 5000 });
     };
     const handleGlobalError = (event) => {
       // Ignore ResizeObserver loop warnings (browser noise)
       if (event.message?.includes('ResizeObserver')) return;
-      toast.error(`⚠️ ${event.message || 'An unexpected error occurred'}`, {
+      toast.error(event.message || 'An unexpected error occurred', {
         id: 'global-error', duration: 5000,
       });
     };
@@ -142,15 +153,22 @@ function AppRoutes() {
           <Route path="/register" element={
             <GuestRoute><AppLayout noLayout><RegisterPage /></AppLayout></GuestRoute>
           } />
+          <Route path="/forgot-password" element={
+            <GuestRoute><AppLayout noLayout><ForgotPasswordPage /></AppLayout></GuestRoute>
+          } />
+          <Route path="/reset-password/:token" element={
+            <GuestRoute><AppLayout noLayout><ResetPasswordPage /></AppLayout></GuestRoute>
+          } />
 
           {/* Protected routes */}
           <Route path="/cart" element={
             <ProtectedRoute><AppLayout>
-              <PageTransition>
-                <div style={{ paddingTop:'6rem', minHeight:'80vh' }} className="container">
-                  <h1>Cart Page</h1>
-                </div>
-              </PageTransition>
+              <PageTransition><CartPage /></PageTransition>
+            </AppLayout></ProtectedRoute>
+          } />
+          <Route path="/wishlist" element={
+            <ProtectedRoute><AppLayout>
+              <PageTransition><WishlistPage /></PageTransition>
             </AppLayout></ProtectedRoute>
           } />
           <Route path="/checkout" element={
@@ -164,13 +182,7 @@ function AppRoutes() {
           } />
           <Route path="/order-confirmation" element={
             <ProtectedRoute><AppLayout>
-              <PageTransition>
-                <div style={{ textAlign:'center', paddingTop:'6rem', minHeight:'80vh' }} className="container">
-                  <p style={{ fontSize:'4rem' }}>🎉</p>
-                  <h1 style={{ fontFamily:'Outfit,sans-serif', marginBottom:'0.5rem' }}>Order Confirmed!</h1>
-                  <p style={{ color:'var(--text-muted)' }}>Check your email for confirmation details.</p>
-                </div>
-              </PageTransition>
+              <PageTransition><OrderConfirmationPage /></PageTransition>
             </AppLayout></ProtectedRoute>
           } />
 
