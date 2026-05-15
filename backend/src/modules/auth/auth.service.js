@@ -16,11 +16,18 @@ const generateTokens = (userId) => {
   return { accessToken, refreshToken };
 };
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  path: '/',
+const getCookieOptions = (req) => {
+  const host = req ? req.get('host') : '';
+  // Force secure/none if on Render/Vercel or if the request is HTTPS
+  const isCloud = !!process.env.RENDER || !!process.env.VERCEL || (host && (host.includes('onrender.com') || host.includes('vercel.app')));
+  const isSecure = isCloud || (req && (req.secure || req.get('x-forwarded-proto') === 'https'));
+
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
+    path: '/',
+  };
 };
 
 exports.register = async (data, res) => {
@@ -66,7 +73,7 @@ exports.register = async (data, res) => {
   return { message, userId: user._id };
 };
 
-exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res) => {
+exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res, req) => {
   const user = await AuthRepo.findById(userId).select('+emailOtp +phoneOtp +emailOtpExpires +phoneOtpExpires');
   if (!user) throw new AppError('User not found', 404);
 
@@ -98,8 +105,9 @@ exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res) => {
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
-  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
-  res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  const options = getCookieOptions(req);
+  res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
   return { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role };
 };
@@ -117,18 +125,20 @@ exports.login = async ({ identifier, password }, res, req) => {
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
-  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
-  res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  const options = getCookieOptions(req);
+  res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
   return { _id: user._id, name: user.name, email: user.email, role: user.role };
 };
 
-exports.oauthLogin = async (user, res) => {
+exports.oauthLogin = async (user, res, req) => {
   const { accessToken, refreshToken } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, refreshToken);
 
-  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
-  res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  const options = getCookieOptions(req);
+  res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 };
 
 exports.refresh = async (req, res) => {
@@ -150,16 +160,18 @@ exports.refresh = async (req, res) => {
   const { accessToken, refreshToken: newRefresh } = generateTokens(user._id);
   await AuthRepo.updateRefreshToken(user._id, newRefresh);
 
-  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
-  res.cookie('refreshToken', newRefresh, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  const options = getCookieOptions(req);
+  res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', newRefresh, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
   return { message: 'Tokens refreshed' };
 };
 
-exports.logout = async (userId, res) => {
+exports.logout = async (userId, res, req) => {
   await AuthRepo.clearRefreshToken(userId);
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  const options = getCookieOptions(req);
+  res.clearCookie('accessToken', options);
+  res.clearCookie('refreshToken', options);
 };
 
 exports.forgotPassword = async (email) => {

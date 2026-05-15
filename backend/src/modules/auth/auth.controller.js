@@ -10,7 +10,7 @@ exports.register = asyncHandler(async (req, res) => {
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
-  const user = await AuthService.verifyOtp(req.body, res);
+  const user = await AuthService.verifyOtp(req.body, res, req);
   sendSuccess(res, user, 'Account verified and logged in successfully', 200);
 });
 
@@ -28,7 +28,7 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-  await AuthService.logout(req.user._id, res);
+  await AuthService.logout(req.user._id, res, req);
   sendSuccess(res, {}, 'Logged out successfully');
 });
 
