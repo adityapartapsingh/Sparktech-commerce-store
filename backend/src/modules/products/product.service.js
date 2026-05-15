@@ -34,6 +34,22 @@ exports.getProducts = async (query) => {
     if (cached) return JSON.parse(cached);
   }
 
+  if (query.category) {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(query.category)) {
+      const Category = require('../../models/Category.model');
+      const category = await Category.findOne({ slug: query.category });
+      if (category) {
+        query.category = category._id.toString();
+      } else {
+        return {
+          products: [],
+          pagination: { page: 1, limit: Number(query.limit) || 12, total: 0, totalPages: 0 }
+        };
+      }
+    }
+  }
+
   const filter = buildFilter(query);
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.min(100, Number(query.limit) || 12);

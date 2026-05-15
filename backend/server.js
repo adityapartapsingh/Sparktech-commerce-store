@@ -67,7 +67,7 @@ startServer();
 // Self-ping to keep Render app awake
 const PING_URL = process.env.BACKEND_URL || 'https://sparktech-commerce-store.onrender.com';
 setInterval(() => {
-  axios.get(PING_URL)
+  axios.get(`${PING_URL}/health`)
     .then(() => logger.info('Self-ping successful'))
     .catch((err) => logger.error(`Self-ping failed: ${err.message}`));
 }, 14 * 60 * 1000); // Pings every 14 minutes

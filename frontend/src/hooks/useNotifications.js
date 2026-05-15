@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
-import toast from 'react-hot-toast';
+
 
 export const useNotifications = () => {
   const queryClient = useQueryClient();

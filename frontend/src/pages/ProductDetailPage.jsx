@@ -11,13 +11,9 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useWishlist } from '../hooks/useWishlist';
-
 /* ── Reviews Section ──────────────────────────────────── */
 const ReviewsSection = ({ productId, user, queryClient }) => {
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [title, setTitle] = useState('');
-  const [comment, setComment] = useState('');
+
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['reviews', productId],
@@ -32,17 +28,7 @@ const ReviewsSection = ({ productId, user, queryClient }) => {
     enabled: !!productId && !!user,
   });
 
-  const submitReview = useMutation({
-    mutationFn: () => api.post('/reviews', { productId, rating, title, comment }),
-    onSuccess: () => {
-      toast.success('Review submitted!');
-      setRating(0); setTitle(''); setComment('');
-      queryClient.invalidateQueries({ queryKey: ['reviews', productId] });
-      queryClient.invalidateQueries({ queryKey: ['review-eligibility', productId] });
-      queryClient.invalidateQueries({ queryKey: ['product'] });
-    },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed to submit review'),
-  });
+
 
   const deleteReview = useMutation({
     mutationFn: (id) => api.delete(`/reviews/${id}`),

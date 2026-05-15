@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Star, ChevronDown, ChevronUp, Trash2, Save, MessageSquare, ShieldCheck, User, Package, Filter, BarChart3 } from 'lucide-react';
+import { Search, Star, ChevronDown, ChevronUp, Trash2, Save, MessageSquare, ShieldCheck, Package, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
 

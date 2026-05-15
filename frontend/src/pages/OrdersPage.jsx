@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   PackageOpen, Clock, CheckCircle2, Truck, XCircle,
   ChevronRight, FileText, RotateCcw, X, ExternalLink,
-  CreditCard, RefreshCw, Star, MessageSquare
+  CreditCard, RefreshCw, Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';

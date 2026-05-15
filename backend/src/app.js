@@ -14,6 +14,7 @@ const { getRedis } = require('./config/redis');
 require('./config/passport'); // Initialize strategies
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ==========================
 //  Security Headers
