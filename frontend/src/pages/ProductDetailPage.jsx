@@ -1,37 +1,202 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, MessageSquare, X } from 'lucide-react';
+import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, Zap, ChevronRight, MessageSquare, Trash2, User, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import api from '../lib/axios';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { useWishlist } from '../hooks/useWishlist';
+
+/* ── Reviews Section ──────────────────────────────────── */
+const ReviewsSection = ({ productId, user, queryClient }) => {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [title, setTitle] = useState('');
+  const [comment, setComment] = useState('');
+
+  const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
+    queryKey: ['reviews', productId],
+    queryFn: () => api.get(`/reviews/product/${productId}`).then(r => r.data.data),
+    enabled: !!productId,
+  });
+
+  // Check if the logged-in user is eligible to review (must have purchased & received)
+  const { data: eligibility } = useQuery({
+    queryKey: ['review-eligibility', productId],
+    queryFn: () => api.get(`/reviews/can-review/${productId}`).then(r => r.data.data),
+    enabled: !!productId && !!user,
+  });
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post('/reviews', { productId, rating, title, comment }),
+    onSuccess: () => {
+      toast.success('Review submitted!');
+      setRating(0); setTitle(''); setComment('');
+      queryClient.invalidateQueries({ queryKey: ['reviews', productId] });
+      queryClient.invalidateQueries({ queryKey: ['review-eligibility', productId] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to submit review'),
+  });
+
+  const deleteReview = useMutation({
+    mutationFn: (id) => api.delete(`/reviews/${id}`),
+    onSuccess: () => {
+      toast.success('Review deleted');
+      queryClient.invalidateQueries({ queryKey: ['reviews', productId] });
+      queryClient.invalidateQueries({ queryKey: ['review-eligibility', productId] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to delete'),
+  });
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : '0';
+
+  return (
+    <div style={{ maxWidth: 800 }}>
+      {/* Summary bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem', padding: '1.25rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+        <div style={{ textAlign: 'center', minWidth: 80 }}>
+          <p style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'Outfit,sans-serif', lineHeight: 1 }}>{avgRating}</p>
+          <div style={{ display: 'flex', gap: '2px', justifyContent: 'center', margin: '0.35rem 0 0.2rem' }}>
+            {[1,2,3,4,5].map(n => (
+              <Star key={n} size={14} fill={n <= Math.round(Number(avgRating)) ? 'var(--accent-amber)' : 'transparent'} color={n <= Math.round(Number(avgRating)) ? 'var(--accent-amber)' : 'var(--border)'} />
+            ))}
+          </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          {[5,4,3,2,1].map(star => {
+            const count = reviews.filter(r => r.rating === star).length;
+            const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+            return (
+              <div key={star} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                <span style={{ width: 16, textAlign: 'right', color: 'var(--text-muted)' }}>{star}</span>
+                <Star size={12} fill="var(--accent-amber)" color="var(--accent-amber)" />
+                <div style={{ flex: 1, height: 6, background: 'var(--bg-elevated)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-amber)', borderRadius: 99, transition: 'width 0.3s' }} />
+                </div>
+                <span style={{ width: 28, color: 'var(--text-muted)', fontSize: '0.75rem' }}>{count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Review Prompts */}
+      {user && eligibility?.canReview && (
+        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,184,0,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,184,0,0.2)', fontSize: '0.88rem', color: 'var(--accent-amber)' }}>
+          <ShieldCheck size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+          To write a review for this product, please visit your <a href="/orders" style={{ fontWeight: 700, color: 'inherit', textDecoration: 'underline' }}>Orders page</a>.
+        </div>
+      )}
+
+      {user && eligibility?.hasReviewed && (
+        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.88rem', color: 'var(--accent-blue)' }}>
+          You have already reviewed this product. Thank you for your feedback!
+        </div>
+      )}
+
+      {user && eligibility && !eligibility.hasPurchased && !eligibility.hasReviewed && (
+        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+          <ShieldCheck size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+          Only verified buyers can write reviews. Purchase this product to share your experience.
+        </div>
+      )}
+
+      {!user && (
+        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+          Please <a href="/login" style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>log in</a> to write a review.
+        </div>
+      )}
+
+      {/* Review list */}
+      {reviewsLoading ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading reviews...</div>
+      ) : reviews.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', border: '1px dashed var(--border)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>No reviews yet</p>
+          <p style={{ fontSize: '0.85rem' }}>Be the first to share your experience with this product.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {reviews.map(review => (
+            <div key={review._id} style={{ padding: '1.25rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-blue)', fontWeight: 700, fontSize: '0.9rem' }}>
+                    {review.user?.name?.charAt(0).toUpperCase() || <User size={16} />}
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '0.92rem' }}>{review.user?.name || 'Anonymous'}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(review.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <Star key={n} size={14} fill={n <= review.rating ? 'var(--accent-amber)' : 'transparent'} color={n <= review.rating ? 'var(--accent-amber)' : 'var(--border)'} />
+                    ))}
+                  </div>
+                  {review.user?._id === user?._id && (
+                    <button
+                      onClick={() => { if (window.confirm('Delete your review?')) deleteReview.mutate(review._id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }}
+                      title="Delete your review"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              {review.title && <p style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.35rem' }}>{review.title}</p>}
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>{review.comment}</p>
+              {review.verified && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--accent-green)', fontWeight: 600 }}>
+                  <ShieldCheck size={12} /> Verified Purchase
+                </span>
+              )}
+
+              {/* Admin remarks — public response from SparkTech */}
+              {review.adminRemarks && (
+                <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(139,92,246,0.05)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--accent-purple)' }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-purple)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>SparkTech Response</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{review.adminRemarks}</p>
+                  {review.remarkedAt && (
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      {new Date(review.remarkedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
   const { items: recentItems, addItem: addRecent } = useRecentlyViewed();
+  const { isInWishlist, toggleWishlist, isToggling } = useWishlist();
 
   const [activeImage, setActiveImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [fbType, setFbType] = useState('feedback');
-  const [fbMsg, setFbMsg] = useState('');
-  const [fbRating, setFbRating] = useState(0);
-
-  const feedbackMutation = useMutation({
-    mutationFn: () => api.post(`/products/${slug}/feedback`, { type: fbType, message: fbMsg, rating: fbRating || undefined }),
-    onSuccess: () => { toast.success('Thank you for your feedback!'); setFeedbackOpen(false); setFbMsg(''); setFbRating(0); },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed to submit feedback'),
-  });
 
   const { data: product, isLoading, isError } = useQuery({
     queryKey: ['product', slug],
@@ -239,6 +404,21 @@ const ProductDetailPage = () => {
               <ShoppingCart size={18} />
               {selectedVariant?.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
             </motion.button>
+            
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              className="btn btn-outline"
+              style={{ width: '48px', padding: 0, justifyContent: 'center', borderColor: isInWishlist(product._id) ? 'var(--accent-red)' : 'var(--border)' }}
+              onClick={() => toggleWishlist(product._id)}
+              disabled={isToggling}
+              title={isInWishlist(product._id) ? "Remove from Wishlist" : "Add to Wishlist"}
+            >
+              <Heart 
+                size={20} 
+                fill={isInWishlist(product._id) ? 'var(--accent-red)' : 'transparent'} 
+                color={isInWishlist(product._id) ? 'var(--accent-red)' : 'var(--text-secondary)'} 
+              />
+            </motion.button>
           </div>
 
           {/* Trust Badges */}
@@ -246,8 +426,8 @@ const ProductDetailPage = () => {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
               <ShieldCheck size={20} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
               <div>
-                <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>1 Year Warranty</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>On all electronic parts</p>
+                <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{product.shortWarranty || (product.warranty ? 'Warranty Available' : '1 Year Warranty')}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{product.shortWarranty ? 'See Warranty tab for details' : 'On all electronic parts'}</p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
@@ -270,7 +450,7 @@ const ProductDetailPage = () => {
 
       {/* Tabs: Description, Specs, Data Sheet */}
       <div style={{ borderBottom: '1px solid var(--border)', display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
-        {['description', 'specifications', 'documents'].map(tab => (
+        {['description', 'specifications', 'reviews', 'warranty', 'documents'].map(tab => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -291,9 +471,17 @@ const ProductDetailPage = () => {
         <AnimatePresence mode="wait">
           {activeTab === 'description' && (
             <motion.div key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y:-10 }}>
-              <p style={{ lineHeight: 1.8, color: 'var(--text-secondary)', maxWidth: '800px' }}>
-                {product.description || 'No description available for this product.'}
-              </p>
+              {product.description ? (
+                <div 
+                  className="product-description"
+                  style={{ lineHeight: 1.8, color: 'var(--text-secondary)', maxWidth: '800px' }}
+                  dangerouslySetInnerHTML={{ __html: product.description }} 
+                />
+              ) : (
+                <p style={{ lineHeight: 1.8, color: 'var(--text-secondary)', maxWidth: '800px' }}>
+                  No description available for this product.
+                </p>
+              )}
               
               {product.features?.length > 0 && (
                 <div style={{ marginTop: '2rem' }}>
@@ -347,81 +535,53 @@ const ProductDetailPage = () => {
               )}
             </motion.div>
           )}
+
+          {activeTab === 'warranty' && (
+            <motion.div key="warranty" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y:-10 }}>
+              {(product.shortWarranty || product.warranty) ? (
+                <div style={{ maxWidth: '800px' }}>
+                  {product.shortWarranty && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      <ShieldCheck size={22} color="var(--accent-blue)" />
+                      <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-blue)' }}>{product.shortWarranty}</span>
+                    </div>
+                  )}
+                  {product.warranty && (
+                    <div style={{ lineHeight: 1.8, color: 'var(--text-secondary)', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      {product.warranty}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-muted)' }}>No warranty information available for this product.</p>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <motion.div key="reviews" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y:-10 }}>
+              <ReviewsSection productId={product._id} user={user} queryClient={queryClient} />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
-      {/* Feedback / Report Section */}
+      {/* Contact Support Section — links to confidential portal */}
       <div style={{ marginTop: '1rem', paddingBottom: '4rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <div>
             <p style={{ fontWeight: 600, marginBottom: '0.2rem' }}>Have a complaint, suggestion, or feedback?</p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Help us improve by sharing your experience with this product.</p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Your messages are confidential and go directly to our team.</p>
           </div>
           <button
-            onClick={() => user ? setFeedbackOpen(true) : toast.error('Please log in to submit feedback')}
+            onClick={() => navigate('/support')}
             className="btn btn-outline"
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            <MessageSquare size={16} /> Give Feedback
+            <MessageSquare size={16} /> Contact Support
           </button>
         </div>
       </div>
 
-      {/* Feedback Modal */}
-      <AnimatePresence>
-        {feedbackOpen && (
-          <motion.div key="feedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setFeedbackOpen(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 480, boxShadow: '0 30px 60px rgba(0,0,0,0.6)' }}>
-              {/* header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-                <div>
-                  <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Product Feedback</h2>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{product.name}</p>
-                </div>
-                <button onClick={() => setFeedbackOpen(false)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                  <X size={16} />
-                </button>
-              </div>
-              {/* body */}
-              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {/* Type */}
-                <div>
-                  <label className="form-label">Type</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {['feedback', 'complaint', 'suggestion', 'compliment'].map(t => (
-                      <button key={t} type="button" onClick={() => setFbType(t)}
-                        style={{ padding: '0.4rem 0.9rem', borderRadius: 99, border: `1.5px solid ${fbType === t ? 'var(--accent-blue)' : 'var(--border)'}`, background: fbType === t ? 'rgba(0,212,255,0.08)' : 'transparent', color: fbType === t ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, textTransform: 'capitalize' }}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Rating */}
-                <div>
-                  <label className="form-label">Rating (optional)</label>
-                  <div style={{ display: 'flex', gap: '0.3rem' }}>
-                    {[1,2,3,4,5].map(n => (
-                      <button key={n} type="button" onClick={() => setFbRating(fbRating === n ? 0 : n)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}>
-                        <Star size={24} fill={n <= fbRating ? 'var(--accent-amber)' : 'transparent'} color={n <= fbRating ? 'var(--accent-amber)' : 'var(--border)'} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Message */}
-                <div>
-                  <label className="form-label">Message *</label>
-                  <textarea className="input" rows={4} placeholder="Describe your experience or issue (min 10 characters)..." value={fbMsg} onChange={e => setFbMsg(e.target.value)} style={{ resize: 'vertical' }} />
-                </div>
-                <button onClick={() => feedbackMutation.mutate()} disabled={fbMsg.length < 10 || feedbackMutation.isPending} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                  {feedbackMutation.isPending ? 'Submitting…' : 'Submit Feedback'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Recently Viewed */}
       {recentItems.filter(r => r._id !== product._id).length > 0 && (

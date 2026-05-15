@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldPlus, LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Store, Menu, X } from 'lucide-react';
+import { ShieldPlus, LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Store, Menu, X, Terminal, MessageSquare, Star } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const AdminLayout = ({ children }) => {
@@ -19,7 +19,10 @@ const AdminLayout = ({ children }) => {
     { name: 'Products', path: '/admin/products', icon: <Package size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={20} /> },
     { name: 'Customers', path: '/admin/customers', icon: <Users size={20} /> },
-    ...(user?.role === 'masteradmin' ? [{ name: 'System Logs', path: '/admin/logs', icon: <Settings size={20} /> }] : [])
+    { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
+    { name: 'Reviews', path: '/admin/reviews', icon: <Star size={20} /> },
+    { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
+    ...(user?.role === 'masteradmin' ? [{ name: 'System Logs', path: '/admin/logs', icon: <Terminal size={20} /> }] : [])
   ];
 
   return (

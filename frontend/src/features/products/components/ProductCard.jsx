@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Star, Zap } from 'lucide-react';
+import { ShoppingCart, Star, Zap, Heart } from 'lucide-react';
 import { useCartStore } from '../../../store/cartStore';
 import { useAuthStore } from '../../../store/authStore';
+import { useWishlist } from '../../../hooks/useWishlist';
 import toast from 'react-hot-toast';
 import api from '../../../lib/axios';
 
 const ProductCard = ({ product }) => {
   const { addItem } = useCartStore();
   const { isAuthenticated } = useAuthStore();
+  const { isInWishlist, toggleWishlist, isToggling } = useWishlist();
 
   const defaultVariant = product.variants?.[0];
 
@@ -92,6 +94,33 @@ const ProductCard = ({ product }) => {
                 <span className="badge badge-red" style={{ fontSize: '0.9rem' }}>Out of Stock</span>
               </div>
             )}
+            
+            {/* Wishlist Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                toggleWishlist(product._id);
+              }}
+              disabled={isToggling}
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', zIndex: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s',
+                opacity: 0.9,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = 0.9}
+            >
+              <Heart 
+                size={16} 
+                fill={isInWishlist(product._id) ? 'var(--accent-red)' : 'transparent'} 
+                color={isInWishlist(product._id) ? 'var(--accent-red)' : 'var(--text-secondary)'} 
+              />
+            </button>
           </div>
 
           {/* Content */}

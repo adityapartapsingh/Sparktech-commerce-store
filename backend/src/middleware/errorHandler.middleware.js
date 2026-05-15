@@ -39,6 +39,11 @@ const errorHandler = (err, req, res, next) => {
 
   // Handle specific Mongoose/JWT errors
   let error = { ...err, message: err.message };
+  
+  if (err.message && err.message.includes('next is not a function')) {
+    require('fs').writeFileSync('d:\\project\\Sparktech-commerce-store-main\\backend\\logs\\next_error_dump.txt', String(err.stack || err));
+  }
+
   if (err.name === 'CastError') error = handleCastErrorDB(error);
   if (err.code === 11000) error = handleDuplicateFieldsDB(error);
   if (err.name === 'ValidationError') error = handleValidationErrorDB(error);

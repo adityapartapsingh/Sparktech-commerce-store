@@ -21,10 +21,14 @@ const ReviewSchema = new mongoose.Schema({
   title:   { type: String, maxlength: 100 },
   comment: { type: String, maxlength: 2000 },
   verified: { type: Boolean, default: false }, // true if user ordered this product
+  order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+  adminRemarks: { type: String, maxlength: 1000 },
+  remarkedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  remarkedAt:   { type: Date },
 }, { timestamps: true });
 
-// One review per user per product
-ReviewSchema.index({ product: 1, user: 1 }, { unique: true });
+// One review per order per product
+ReviewSchema.index({ order: 1, product: 1 }, { unique: true });
 
 // Recalculate product rating after review save/delete
 ReviewSchema.statics.calcAverageRating = async function (productId) {

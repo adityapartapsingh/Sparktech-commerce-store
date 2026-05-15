@@ -26,6 +26,16 @@ const HomePage = () => {
     retry: 2,
   });
 
+  const { data: newArrivalsData, isLoading: isNewArrivalsLoading } = useQuery({
+    queryKey: ['products', { sort: 'newest', limit: 8 }],
+    queryFn: () => api.get('/products', { params: { sort: 'newest', limit: 8 } }).then((r) => r.data.data.products),
+  });
+
+  const { data: topRatedData, isLoading: isTopRatedLoading } = useQuery({
+    queryKey: ['products', { sort: 'rating', limit: 8 }],
+    queryFn: () => api.get('/products', { params: { sort: 'rating', limit: 8 } }).then((r) => r.data.data.products),
+  });
+
   return (
     <div className="page-wrapper">
       <Helmet>
@@ -177,6 +187,64 @@ const HomePage = () => {
               action={{ label: 'Browse All Products', to: '/products' }}
             />
           )}
+        </div>
+      </section>
+
+      {/* ═══ NEW ARRIVALS ═══ */}
+      <section className="section">
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="section-header" style={{ marginBottom: 0, textAlign: 'left' }}>
+              <h2>New Arrivals</h2>
+              <p>The latest additions to our catalog</p>
+            </div>
+            <Link to="/products?sort=newest" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+              View All <ChevronRight size={16} />
+            </Link>
+          </div>
+
+          {isNewArrivalsLoading ? (
+            <div className="product-grid">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 320 }} />
+              ))}
+            </div>
+          ) : newArrivalsData && newArrivalsData.length > 0 ? (
+            <div className="product-grid">
+              {newArrivalsData.slice(0, 8).map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ═══ TOP RATED ═══ */}
+      <section className="section" style={{ background: 'var(--bg-secondary)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="section-header" style={{ marginBottom: 0, textAlign: 'left' }}>
+              <h2>Top Rated Products</h2>
+              <p>Highly recommended by our community</p>
+            </div>
+            <Link to="/products?sort=rating" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+              View All <ChevronRight size={16} />
+            </Link>
+          </div>
+
+          {isTopRatedLoading ? (
+            <div className="product-grid">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 320 }} />
+              ))}
+            </div>
+          ) : topRatedData && topRatedData.length > 0 ? (
+            <div className="product-grid">
+              {topRatedData.slice(0, 8).map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

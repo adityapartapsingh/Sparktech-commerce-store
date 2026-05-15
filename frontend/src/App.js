@@ -22,6 +22,7 @@ import './index.css';
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ProductListPage = lazy(() => import('./pages/ProductListPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const ServicePage = lazy(() => import('./pages/ServicePage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -29,7 +30,10 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
 const AdminOrdersPageAdmin = lazy(() => import('./pages/admin/AdminOrdersPage'));
 const AdminCustomersPage = lazy(() => import('./pages/admin/AdminCustomersPage'));
+const AdminFeedbackPage  = lazy(() => import('./pages/admin/AdminFeedbackPage'));
+const AdminReviewsPage   = lazy(() => import('./pages/admin/AdminReviewsPage'));
 const AdminLogsPage      = lazy(() => import('./pages/admin/AdminLogsPage'));
+const AdminSettingsPage  = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const LoginPage    = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
@@ -38,6 +42,7 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 
 // Placeholder pages (you can build these out next)
 const NotFoundPage = () => (
@@ -145,6 +150,9 @@ function AppRoutes() {
           <Route path="/products/:slug" element={
             <AppLayout><PageTransition><ProductDetailPage /></PageTransition></AppLayout>
           } />
+          <Route path="/services" element={
+            <AppLayout><PageTransition><ServicePage /></PageTransition></AppLayout>
+          } />
 
           {/* Auth routes (guest only) */}
           <Route path="/login" element={
@@ -186,6 +194,10 @@ function AppRoutes() {
             </AppLayout></ProtectedRoute>
           } />
 
+          <Route path="/support" element={
+            <AppLayout><PageTransition><SupportPage /></PageTransition></AppLayout>
+          } />
+
           {/* Admin routes */}
           <Route path="/admin/login" element={
              <PageTransition><AdminLoginPage /></PageTransition>
@@ -203,8 +215,17 @@ function AppRoutes() {
           <Route path="/admin/customers" element={
             <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminCustomersPage /></PageTransition></AdminLayout></ProtectedRoute>
           } />
+          <Route path="/admin/feedback" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminFeedbackPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
+          <Route path="/admin/reviews" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminReviewsPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
           <Route path="/admin/logs" element={
             <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminLogsPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
+          <Route path="/admin/settings" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminSettingsPage /></PageTransition></AdminLayout></ProtectedRoute>
           } />
 
           {/* 404 */}

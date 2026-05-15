@@ -142,7 +142,9 @@ app.use('/api/v1/cart',       require('./modules/cart/cart.routes'));
 app.use('/api/v1/orders',     require('./modules/orders/orders.routes'));
 app.use('/api/v1/payments',   require('./modules/payments/payments.routes'));
 app.use('/api/v1/reviews',    require('./modules/reviews/reviews.routes'));
+app.use('/api/v1/feedback',   require('./modules/feedback/feedback.routes'));
 app.use('/api/v1/wishlist',   require('./modules/wishlist/wishlist.routes'));
+app.use('/api/v1/notifications', require('./modules/notifications/notifications.routes'));
 app.use('/api/v1/admin',      require('./modules/admin/admin.routes'));
 
 // ==========================

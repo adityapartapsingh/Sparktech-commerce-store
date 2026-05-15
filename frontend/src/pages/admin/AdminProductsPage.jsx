@@ -2,10 +2,39 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, UploadCloud, Search, ImageIcon, Layers, Settings2, Download, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, UploadCloud, Search, ImageIcon, Layers, Settings2, Download, ChevronDown, Package, IndianRupee, AlertTriangle, FileUp, List } from 'lucide-react';
+import RichTextEditor from '../../components/RichTextEditor';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
 import { exportData } from '../../lib/exportData';
+
+// Common specification keys for electronic components — used for quick-add in the Specifications tab
+const COMMON_SPECS = [
+  { key: 'Item Type', unit: '' },
+  { key: 'Model Name', unit: '' },
+  { key: 'Operating Voltage', unit: 'V' },
+  { key: 'Digital Output Voltage', unit: 'V' },
+  { key: 'Operating Current', unit: 'mA' },
+  { key: 'Detecting Range', unit: '' },
+  { key: 'Operating Temperature', unit: '°C' },
+  { key: 'Opt. Relative Humidity (RH)', unit: '%' },
+  { key: 'Preheat Time', unit: 's' },
+  { key: 'Interface', unit: '' },
+  { key: 'Length', unit: 'mm' },
+  { key: 'Width', unit: 'mm' },
+  { key: 'Height', unit: 'mm' },
+  { key: 'Weight', unit: 'g' },
+  { key: 'Shipping Weight', unit: 'kg' },
+  { key: 'Shipping Dimensions', unit: 'cm' },
+  { key: 'Material', unit: '' },
+  { key: 'Color', unit: '' },
+  { key: 'Connectivity', unit: '' },
+  { key: 'Power Supply', unit: '' },
+  { key: 'Frequency', unit: 'Hz' },
+  { key: 'Resolution', unit: '' },
+  { key: 'Accuracy', unit: '' },
+  { key: 'Pin Count', unit: '' },
+];
 
 const AdminProductsPage = () => {
   const queryClient = useQueryClient();
@@ -25,14 +54,19 @@ const AdminProductsPage = () => {
   // Media State
   const [imageFiles, setImageFiles] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
 
   // Variant State
   const [variants, setVariants] = useState([]);
   
-  const { register, handleSubmit, reset, watch } = useForm();
+  // Attributes/Specs State
+  const [attributes, setAttributes] = useState([]);
+  
+  const { register, handleSubmit, reset, watch, setValue } = useForm();
 
   const brandName = watch('brand');
   const catId = watch('category');
+  const descriptionContent = watch('description');
 
   // Fetch Categories
   const { data: catData } = useQuery({
@@ -48,7 +82,7 @@ const AdminProductsPage = () => {
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin-products', searchTerm],
     queryFn: async () => {
-      const res = await api.get('/products', { params: { search: searchTerm, limit: 50 } });
+      const res = await api.get('/products', { params: { search: searchTerm, limit: 100 } });
       return res.data;
     }
   });
@@ -77,6 +111,7 @@ const AdminProductsPage = () => {
       setIsModalOpen(false);
       reset();
       setVariants([]);
+      setAttributes([]);
       setImageFiles([]);
       setIsCreatingCategory(false);
       setNewCategoryName('');
@@ -108,16 +143,22 @@ const AdminProductsPage = () => {
          name: product.name,
          brand: product.brand,
          category: product.category?._id || product.category,
+         subCategory: product.subCategory || '',
+         tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
+         shortWarranty: product.shortWarranty || '',
+         warranty: product.warranty || '',
          basePrice: product.basePrice,
          sku: product.sku,
          description: product.description,
          isActive: product.isActive
        });
        setVariants(product.variants || []);
+       setAttributes(product.attributes || []);
        setExistingImages(product.images || []);
     } else {
-       reset({ name: '', brand: '', category: categories[0]?._id || '', basePrice: '', sku: `SKU-${Math.floor(Math.random()*10000)}`, description: '', isActive: true });
+       reset({ name: '', brand: '', category: categories[0]?._id || '', subCategory: '', tags: '', shortWarranty: '', warranty: '', basePrice: '', sku: `SKU-${Math.floor(Math.random()*10000)}`, description: '', isActive: true });
        setVariants([{ sku: '', label: 'Default', price: 0, stock: 10 }]);
+       setAttributes([]);
        setExistingImages([]);
     }
     setIsModalOpen(true);
@@ -150,6 +191,7 @@ const AdminProductsPage = () => {
     const formData = new FormData();
     Object.keys(data).forEach(key => formData.append(key, data[key]));
     formData.append('variants', JSON.stringify(variants));
+    formData.append('attributes', JSON.stringify(attributes));
     
     // Append Images
     imageFiles.forEach(file => {
@@ -162,6 +204,25 @@ const AdminProductsPage = () => {
   const handleImageSelect = (e) => {
     if(e.target.files) {
       setImageFiles(prev => [...prev, ...Array.from(e.target.files)]);
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setImageFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
     }
   };
 
@@ -187,6 +248,14 @@ const AdminProductsPage = () => {
       setExporting(false);
     }
   };
+
+  // Inventory Overview Calculations
+  const totalInventoryValue = products.reduce((acc, p) => {
+    const totalStock = p.variants?.reduce((s, v) => s + v.stock, 0) || 0;
+    return acc + ((p.basePrice || 0) * totalStock);
+  }, 0);
+  const totalStockItems = products.reduce((acc, p) => acc + (p.variants?.reduce((s, v) => s + v.stock, 0) || 0), 0);
+  const lowStockCount = products.filter(p => p.variants?.some(v => v.stock < 10)).length;
 
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
@@ -219,9 +288,45 @@ const AdminProductsPage = () => {
               </div>
             )}
           </div>
+          <button onClick={() => toast('Bulk import via CSV is currently disabled.', { icon: 'ℹ️' })} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+            <FileUp size={16} /> Bulk Import
+          </button>
           <button onClick={() => openModal()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Plus size={18} /> Add Product
           </button>
+        </div>
+      </div>
+
+      {/* Inventory Overview Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IndianRupee size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Inventory Value</p>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>₹{totalInventoryValue.toLocaleString('en-IN')}</h3>
+          </div>
+        </div>
+        
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Package size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Items in Stock</p>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalStockItems.toLocaleString('en-IN')}</h3>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertTriangle size={24} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Low Stock Products</p>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{lowStockCount}</h3>
+          </div>
         </div>
       </div>
 
@@ -313,7 +418,7 @@ const AdminProductsPage = () => {
               
               {/* Tabs */}
               <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 1.5rem', background: 'rgba(0,0,0,0.2)' }}>
-                {[{ id: 'general', icon: <Settings2 size={16} />, label: 'General Info' }, { id: 'media', icon: <ImageIcon size={16} />, label: 'Media & Uploads' }, { id: 'variants', icon: <Layers size={16} />, label: 'Inventory & Variants' }].map(tab => (
+                {[{ id: 'general', icon: <Settings2 size={16} />, label: 'General Info' }, { id: 'specifications', icon: <List size={16} />, label: 'Specifications' }, { id: 'media', icon: <ImageIcon size={16} />, label: 'Media & Uploads' }, { id: 'variants', icon: <Layers size={16} />, label: 'Inventory & Variants' }].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
@@ -392,14 +497,39 @@ const AdminProductsPage = () => {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <label className="label">Base Global SKU *</label>
-                      <input type="text" className="input" placeholder="RM-RPI-001" {...register('sku', { required: true })} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                      <div>
+                        <label className="label">Base Global SKU *</label>
+                        <input type="text" className="input" placeholder="RM-RPI-001" {...register('sku', { required: true })} />
+                      </div>
+                      <div>
+                        <label className="label">Sub Category</label>
+                        <input type="text" className="input" placeholder="e.g. Microcontrollers" {...register('subCategory')} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                      <div>
+                        <label className="label">Tags (comma separated)</label>
+                        <input type="text" className="input" placeholder="e.g. sensor, arduino" {...register('tags')} />
+                      </div>
+                      <div>
+                        <label className="label">Short Warranty</label>
+                        <input type="text" className="input" placeholder="e.g. 15 Days Warranty" {...register('shortWarranty')} />
+                      </div>
+                      <div>
+                        <label className="label">Full Warranty Details</label>
+                        <input type="text" className="input" placeholder="e.g. This item is covered with a standard..." {...register('warranty')} />
+                      </div>
                     </div>
 
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <label className="label">Full Description</label>
-                      <textarea className="input" rows={4} placeholder="Hardware specifications, features, etc..." {...register('description')}></textarea>
+                      <label className="label">Rich Description (Supports Images & Video Links)</label>
+                      <RichTextEditor
+                        value={descriptionContent || ''}
+                        onChange={(val) => setValue('description', val)}
+                        placeholder="Write your product description here..."
+                      />
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
@@ -410,13 +540,26 @@ const AdminProductsPage = () => {
 
                   {/* TAB 2: MEDIA */}
                   <div style={{ display: activeTab === 'media' ? 'block' : 'none' }}>
-                    <div style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '3rem 2rem', textAlign: 'center', background: 'var(--bg-primary)' }}>
-                       <UploadCloud size={48} color="var(--accent-blue)" style={{ marginBottom: '1rem', opacity: 0.8 }} />
-                       <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Upload Product Images</h3>
-                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Select up to 10 high-resolution images. First image will be the primary display.</p>
+                    <div 
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      style={{ 
+                        border: `2px dashed ${dragActive ? 'var(--accent-blue)' : 'var(--border)'}`, 
+                        borderRadius: 'var(--radius-lg)', 
+                        padding: '3rem 2rem', 
+                        textAlign: 'center', 
+                        background: dragActive ? 'rgba(59, 130, 246, 0.05)' : 'var(--bg-primary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                       <UploadCloud size={48} color={dragActive ? "var(--accent-blue)" : "var(--text-muted)"} style={{ marginBottom: '1rem', opacity: dragActive ? 1 : 0.8 }} />
+                       <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: dragActive ? 'var(--accent-blue)' : 'inherit' }}>Drag and Drop Images Here</h3>
+                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>or click below to browse. Select up to 10 high-resolution images.</p>
                        
                        <input type="file" id="fileUpload" multiple accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
-                       <label htmlFor="fileUpload" className="btn btn-outline" style={{ display: 'inline-flex', cursor: 'pointer' }}>Browse Files</label>
+                       <label htmlFor="fileUpload" className="btn btn-outline" style={{ display: 'inline-flex', cursor: 'pointer', background: 'var(--bg-card)' }}>Browse Files</label>
                     </div>
 
                     {(existingImages.length > 0 || imageFiles.length > 0) && (
@@ -437,6 +580,78 @@ const AdminProductsPage = () => {
                           ))}
                         </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* TAB 2.5: SPECIFICATIONS */}
+                  <div style={{ display: activeTab === 'specifications' ? 'block' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div>
+                        <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>Specifications Table</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>Click a spec below to quick-add, or add custom rows manually.</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button type="button" onClick={() => {
+                          const existing = attributes.map(a => a.key.toLowerCase());
+                          const missing = COMMON_SPECS.filter(s => !existing.includes(s.key.toLowerCase()));
+                          if (missing.length === 0) return;
+                          setAttributes([...attributes, ...missing.map(s => ({ key: s.key, value: '', unit: s.unit || '' }))]);
+                        }} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>Add All Common</button>
+                        <button type="button" onClick={() => setAttributes([...attributes, { key: '', value: '', unit: '' }])} className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}><Plus size={14} /> Custom Row</button>
+                      </div>
+                    </div>
+
+                    {/* Quick-add Spec Chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem', padding: '1rem', background: 'rgba(59,130,246,0.04)', borderRadius: 'var(--radius-md)', border: '1px dashed rgba(59,130,246,0.2)' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, width: '100%', marginBottom: '0.25rem' }}>QUICK ADD — click to insert:</span>
+                      {COMMON_SPECS.map(spec => {
+                        const alreadyAdded = attributes.some(a => a.key.toLowerCase() === spec.key.toLowerCase());
+                        return (
+                          <button
+                            type="button"
+                            key={spec.key}
+                            disabled={alreadyAdded}
+                            onClick={() => {
+                              if (!alreadyAdded) {
+                                setAttributes([...attributes, { key: spec.key, value: '', unit: spec.unit || '' }]);
+                              }
+                            }}
+                            style={{
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: 99,
+                              border: `1px solid ${alreadyAdded ? 'var(--border)' : 'rgba(59,130,246,0.3)'}`,
+                              background: alreadyAdded ? 'var(--bg-elevated)' : 'rgba(59,130,246,0.08)',
+                              color: alreadyAdded ? 'var(--text-muted)' : 'var(--accent-blue)',
+                              cursor: alreadyAdded ? 'default' : 'pointer',
+                              fontSize: '0.8rem',
+                              fontWeight: 500,
+                              opacity: alreadyAdded ? 0.5 : 1,
+                              transition: 'all 0.15s',
+                              textDecoration: alreadyAdded ? 'line-through' : 'none',
+                            }}
+                          >
+                            {alreadyAdded ? '✓ ' : '+ '}{spec.key}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {attributes.length === 0 ? (
+                       <div style={{ textAlign: 'center', padding: '3rem', border: '1px dashed var(--border)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }}>
+                         No specifications added. Click a common spec above or use Add All Common.
+                       </div>
+                    ) : (
+                      attributes.map((attr, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1fr) minmax(150px, 2fr) 100px 40px', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <input type="text" list="common-spec-keys" placeholder="Key (e.g. Dimensions)" className="input" value={attr.key} onChange={e => { const newA = [...attributes]; newA[idx].key = e.target.value; setAttributes(newA); }} required />
+                          <input type="text" placeholder="Value (e.g. 36x20x21)" className="input" value={attr.value} onChange={e => { const newA = [...attributes]; newA[idx].value = e.target.value; setAttributes(newA); }} required />
+                          <input type="text" placeholder="Unit" className="input" value={attr.unit} onChange={e => { const newA = [...attributes]; newA[idx].unit = e.target.value; setAttributes(newA); }} />
+                          <button type="button" onClick={() => setAttributes(attributes.filter((_, i) => i !== idx))} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-red)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
 
@@ -480,7 +695,7 @@ const AdminProductsPage = () => {
               {/* Footer Actions */}
               <div style={{ padding: '1.25rem 1.5rem', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                   {activeTab === 'general' ? 'Next: Add Media' : activeTab === 'media' ? 'Next: Configure Variants' : 'Ready to save'}
+                   {activeTab === 'general' ? 'Next: Add Specifications' : activeTab === 'specifications' ? 'Next: Add Media' : activeTab === 'media' ? 'Next: Configure Variants' : 'Ready to save'}
                 </span>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">Discard Changes</button>

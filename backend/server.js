@@ -5,6 +5,7 @@ const { connectRedis } = require('./src/config/redis');
 const logger = require('./src/utils/logger');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 // Create logs directory if it doesn't exist
 const logsDir = path.join(__dirname, 'logs');
@@ -62,3 +63,12 @@ const startServer = async () => {
 };
 
 startServer();
+
+// Self-ping to keep Render app awake
+const PING_URL = process.env.BACKEND_URL || 'https://sparktech-commerce-store.onrender.com';
+setInterval(() => {
+  axios.get(PING_URL)
+    .then(() => logger.info('Self-ping successful'))
+    .catch((err) => logger.error(`Self-ping failed: ${err.message}`));
+}, 14 * 60 * 1000); // Pings every 14 minutes
+

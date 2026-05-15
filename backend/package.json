@@ -1,7 +1,7 @@
 {
-  "name": "robomart-backend",
+  "name": "sparktech-backend",
   "version": "1.0.0",
-  "description": "RoboMart e-commerce backend API — robotic & electronic parts",
+  "description": "SparkTech e-commerce backend API — electronic components & DIY parts",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "@sentry/node": "^10.44.0",
+    "axios": "^1.16.1",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
+    "connect-redis": "^8.0.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -25,7 +27,6 @@
     "express-session": "^1.18.1",
     "express-slow-down": "^3.1.0",
     "helmet": "^8.1.0",
-    "connect-redis": "^8.0.1",
     "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.1",

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Search, Menu, X, Zap, User, LogOut, LayoutDashboard, Package, Heart, Sun, Moon } from 'lucide-react';
+import { ShoppingCart, Search, Menu, X, Zap, User, LogOut, LayoutDashboard, Package, Heart, Sun, Moon, MessageSquare, Bell, Check, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useWishlist } from '../../hooks/useWishlist';
+import { useNotifications } from '../../hooks/useNotifications';
 import SearchBar from '../../features/search/SearchBar';
 import api from '../../lib/axios';
 import toast from 'react-hot-toast';
@@ -13,11 +15,14 @@ const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const { cartCount, openCart } = useCartStore();
+  const { wishlist } = useWishlist();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -40,6 +45,7 @@ const Navbar = () => {
     { to: '/products?featured=true', label: 'Featured' },
     { to: '/products?category=microcontrollers', label: 'Microcontrollers' },
     { to: '/products?category=sensors', label: 'Sensors' },
+    { to: '/services', label: 'Services' },
   ];
 
   return (
@@ -113,7 +119,113 @@ const Navbar = () => {
             {isAuthenticated && (
               <Link to="/wishlist" className="btn btn-ghost" style={{ padding: '0.5rem', position: 'relative' }}>
                 <Heart size={20} />
+                {wishlist.length > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0, right: 0,
+                      background: 'var(--accent-red)',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      width: 18, height: 18,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {wishlist.length}
+                  </motion.span>
+                )}
               </Link>
+            )}
+
+            {/* Notifications */}
+            {isAuthenticated && (
+              <div style={{ position: 'relative' }}>
+                <button className="btn btn-ghost" onClick={() => setNotifOpen(!notifOpen)} style={{ padding: '0.5rem', position: 'relative' }}>
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      style={{
+                        position: 'absolute',
+                        top: 0, right: 0,
+                        background: 'var(--accent-amber)',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        width: 18, height: 18,
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {unreadCount}
+                    </motion.span>
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notifOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      style={{
+                        position: 'absolute', right: 0, top: 'calc(100% + 0.5rem)',
+                        background: 'var(--bg-card)', border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)', width: 320,
+                        overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                        zIndex: 100,
+                      }}
+                    >
+                      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>Notifications</p>
+                        {unreadCount > 0 && (
+                          <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                        {notifications.length === 0 ? (
+                          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <Bell size={24} style={{ opacity: 0.5, margin: '0 auto 0.5rem' }} />
+                            <p style={{ fontSize: '0.85rem' }}>No notifications</p>
+                          </div>
+                        ) : (
+                          notifications.map((n) => (
+                            <div key={n._id} style={{
+                              padding: '1rem', borderBottom: '1px solid var(--border)',
+                              background: n.read ? 'transparent' : 'rgba(59,130,246,0.05)',
+                              display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: '0.85rem', fontWeight: n.read ? 500 : 600, marginBottom: '0.2rem', color: 'var(--text-primary)' }}>{n.title}</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.message}</p>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
+                                  {new Date(n.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {!n.read && (
+                                  <button onClick={() => markAsRead(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '0.2rem' }} title="Mark as read">
+                                    <Check size={14} />
+                                  </button>
+                                )}
+                                <button onClick={() => deleteNotification(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '0.2rem' }} title="Delete">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {/* Cart */}
@@ -182,6 +294,7 @@ const Navbar = () => {
                       {[
                         { to:'/profile', icon:<User size={16}/>, label:'Profile' },
                         { to:'/orders', icon:<Package size={16}/>, label:'Orders' },
+                        { to:'/support', icon:<MessageSquare size={16}/>, label:'Support' },
                         ...(user?.role==='admin' || user?.role==='masteradmin' ? [{ to:'/admin/dashboard', icon:<LayoutDashboard size={16}/>, label:'Admin Panel' }] : []),
                       ].map(({ to, icon, label }) => (
                         <Link key={to} to={to} onClick={() => setDropdownOpen(false)} style={{

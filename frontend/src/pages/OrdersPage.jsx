@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   PackageOpen, Clock, CheckCircle2, Truck, XCircle,
   ChevronRight, FileText, RotateCcw, X, ExternalLink,
-  CreditCard, RefreshCw,
+  CreditCard, RefreshCw, Star, MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -100,6 +100,83 @@ const CancelModal = ({ order, onConfirm, onClose, isPending }) => {
               <XCircle size={16} /> {isPending ? 'Cancelling…' : 'Confirm Cancellation'}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Review Modal ─────────────────────────────────────── */
+const ReviewModal = ({ product, onClose }) => {
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [title, setTitle] = useState('');
+  const [comment, setComment] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/reviews', { productId: product.id, orderId: product.orderId, rating, title, comment }),
+    onSuccess: () => {
+      toast.success('Review submitted successfully!');
+      queryClient.invalidateQueries(['my-orders']);
+      queryClient.invalidateQueries(['my-reviewed-items']);
+      onClose();
+    },
+    onError: (e) => {
+      if (e.response?.status === 409) {
+        toast.error('You have already reviewed this product from this order.');
+        onClose();
+      } else {
+        toast.error(e.response?.data?.message || 'Failed to submit review');
+      }
+    },
+  });
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 460, boxShadow: '0 30px 60px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Write a Review</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+        </div>
+        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{product.name}</p>
+          
+          <div>
+            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Rating *</label>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  onClick={() => setRating(star)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <Star
+                    size={32}
+                    fill={(hoveredRating || rating) >= star ? 'var(--accent-amber)' : 'transparent'}
+                    color={(hoveredRating || rating) >= star ? 'var(--accent-amber)' : 'var(--border)'}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label className="form-label">Review Title (optional)</label>
+            <input type="text" className="input" placeholder="Summarize your experience" value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
+          </div>
+
+          <div>
+            <label className="form-label">Review (optional)</label>
+            <textarea className="input" rows={4} placeholder="What did you like or dislike? How did it fit?" value={comment} onChange={e => setComment(e.target.value)} maxLength={2000} style={{ resize: 'vertical' }} />
+          </div>
+
+          <button onClick={() => mutation.mutate()} disabled={!rating || mutation.isPending} className="btn btn-primary" style={{ justifyContent: 'center', padding: '0.85rem' }}>
+            {mutation.isPending ? 'Submitting...' : 'Submit Review'}
+          </button>
         </div>
       </div>
     </div>
@@ -327,10 +404,17 @@ const OrdersPage = () => {
   const [invoiceOrder, setInvoiceOrder] = useState(null);
   const [returnOrder,  setReturnOrder]  = useState(null);
   const [cancelOrder,  setCancelOrder]  = useState(null);
+  const [reviewProduct, setReviewProduct] = useState(null);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['my-orders'],
     queryFn: () => api.get('/orders/my').then(r => r.data.data),
+    enabled: !!user,
+  });
+
+  const { data: reviewedItems = [] } = useQuery({
+    queryKey: ['my-reviewed-items'], // change queryKey to avoid cache conflicts with old format
+    queryFn: () => api.get('/reviews/my-reviewed-items').then(r => r.data.data),
     enabled: !!user,
   });
 
@@ -410,6 +494,17 @@ const OrdersPage = () => {
                   <OrderTimeline status={order.status} />
                 </div>
 
+                {/* Delivery Feedback Banner */}
+                {order.status === 'delivered' && (
+                  <div style={{ margin: '1rem 1.5rem 0', padding: '0.75rem 1rem', background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Star size={20} color="var(--accent-amber)" />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Your order was delivered!</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Please take a moment to rate the products below. Have an issue? You can submit feedback in the Support Portal.</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Items */}
                 <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {order.items.map(item => (
@@ -421,7 +516,20 @@ const OrdersPage = () => {
                         <p style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.variantLabel} × {item.quantity}</p>
                       </div>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>₹{(item.price * item.quantity).toLocaleString('en-IN')}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>₹{(item.price * item.quantity).toLocaleString('en-IN')}</div>
+                        {order.status === 'delivered' && (
+                          reviewedItems.some(r => r.order === order._id && r.product === item.product) ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: 99, background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>
+                              <CheckCircle2 size={12} /> Reviewed
+                            </span>
+                          ) : (
+                            <button onClick={() => setReviewProduct({ id: item.product, name: item.name, orderId: order._id })} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: 99, background: 'rgba(255,184,0,0.1)', color: 'var(--accent-amber)', border: '1px solid rgba(255,184,0,0.3)', cursor: 'pointer', fontWeight: 600 }}>
+                              <Star size={12} /> Write Review
+                            </button>
+                          )
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -580,6 +688,11 @@ const OrdersPage = () => {
               isPending={cancelMutation.isPending}
               onConfirm={({ reason, comment }) => cancelMutation.mutate({ orderId: cancelOrder._id, reason, comment })}
             />
+          </motion.div>
+        )}
+        {reviewProduct && (
+          <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ReviewModal product={reviewProduct} onClose={() => setReviewProduct(null)} />
           </motion.div>
         )}
       </AnimatePresence>

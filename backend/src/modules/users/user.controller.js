@@ -63,6 +63,27 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   sendSuccess(res, user, 'Profile updated');
 });
 
+// ── Update Password ───────────────────────────────────────
+exports.updatePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  // Need to get user with password to check
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) throw new AppError('User not found', 404);
+
+  // Check if current password is correct
+  const isCorrect = await user.comparePassword(currentPassword);
+  if (!isCorrect) {
+    throw new AppError('Incorrect current password', 401);
+  }
+
+  // Set new password (will be hashed by pre-save hook)
+  user.password = newPassword;
+  await user.save();
+
+  sendSuccess(res, null, 'Password updated successfully');
+});
+
 // ── Add Address ─────────────────────────────────────────
 exports.addAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)

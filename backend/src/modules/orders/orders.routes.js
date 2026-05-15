@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../../models/Order.model');
 const Product = require('../../models/Product.model');
+const Notification = require('../../models/Notification.model');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const { protect } = require('../../middleware/auth.middleware');
@@ -54,6 +55,18 @@ router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), validate
     { returnDocument: 'after' }
   );
   if (!order) throw new AppError('Order not found', 404);
+
+  // Send notification to user
+  if (['shipped', 'delivered'].includes(status)) {
+    await Notification.create({
+      user: order.user,
+      title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+      message: `Your order #${order._id.toString().substring(0,8).toUpperCase()} has been ${status}.`,
+      type: 'order',
+      link: '/orders'
+    });
+  }
+
   sendSuccess(res, order, 'Order status updated');
 }));
 
@@ -159,6 +172,15 @@ router.put('/:id/delivery', protect, authorize('admin', 'masteradmin'), asyncHan
     sendShippedSMS(orderUser.phone, order._id, trackingNumber, provider)
       .catch((e) => logger.error(`Shipped SMS failed: ${e.message}`));
   }
+
+  // Send notification to user
+  await Notification.create({
+    user: order.user,
+    title: `Order Shipped`,
+    message: `Your order #${order._id.toString().substring(0,8).toUpperCase()} has been shipped via ${provider}.`,
+    type: 'order',
+    link: '/orders'
+  });
 
   sendSuccess(res, updatedOrder, 'Delivery information updated successfully');
 }));

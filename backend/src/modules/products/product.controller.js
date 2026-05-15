@@ -27,7 +27,17 @@ exports.createProduct = asyncHandler(async (req, res) => {
   }
   req.body.variants = JSON.parse(req.body.variants || '[]');
   req.body.attributes = JSON.parse(req.body.attributes || '[]');
-  req.body.tags = JSON.parse(req.body.tags || '[]');
+  
+  if (req.body.tags) {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {
+      req.body.tags = req.body.tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
+  } else {
+    req.body.tags = [];
+  }
+  
   req.body.createdBy = req.user._id;
 
   const product = await ProductService.createProduct(req.body);
@@ -38,6 +48,13 @@ exports.updateProduct = asyncHandler(async (req, res) => {
   if (req.files?.length) req.body.images = req.files.map((f) => f.path);
   if (req.body.variants) req.body.variants = JSON.parse(req.body.variants);
   if (req.body.attributes) req.body.attributes = JSON.parse(req.body.attributes);
+  if (req.body.tags) {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {
+      req.body.tags = req.body.tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
+  }
   const product = await ProductService.updateProduct(req.params.id, req.body);
   sendSuccess(res, product, 'Product updated');
 });

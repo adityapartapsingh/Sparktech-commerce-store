@@ -12,6 +12,11 @@ const UpdateProfileSchema = z.object({
   phone: z.string().regex(/^\d{10,15}$/, 'Invalid phone number').optional().or(z.literal('')),
 });
 
+const UpdatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
+
 const AddressSchema = z.object({
   label: z.string().min(1).max(50).default('Home'),
   line1: z.string().min(3).max(200),
@@ -28,6 +33,9 @@ router.get('/', protect, authorize('admin', 'masteradmin'), UserController.getAl
 
 // ── Authenticated user: profile update ──────────────────
 router.patch('/me', protect, validate(UpdateProfileSchema), UserController.updateProfile);
+
+// ── Authenticated user: password update ─────────────────
+router.patch('/me/password', protect, validate(UpdatePasswordSchema), UserController.updatePassword);
 
 // ── Authenticated user: address CRUD ────────────────────
 router.post('/me/addresses', protect, validate(AddressSchema), UserController.addAddress);

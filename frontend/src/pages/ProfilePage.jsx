@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   User, Mail, Shield, MapPin, Package, LogOut, ChevronRight,
   Pencil, Phone, X, Plus, Trash2, Home, Building2, MapPinned,
+  Lock, Activity, History
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -70,6 +71,66 @@ const EditProfileModal = ({ user, onClose, onSaved }) => {
             <button type="button" onClick={onClose} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
             <button type="submit" disabled={mutation.isPending} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
               {mutation.isPending ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/* ── Change Password Modal ───────────────────────────── */
+const ChangePasswordModal = ({ onClose }) => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (data) => api.patch('/users/me/password', data),
+    onSuccess: () => {
+      toast.success('Password updated successfully');
+      onClose();
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to update password'),
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      return toast.error('New passwords do not match');
+    }
+    if (newPassword.length < 8) {
+      return toast.error('New password must be at least 8 characters');
+    }
+    mutation.mutate({ currentPassword, newPassword });
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 420, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
+          <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Change Password</h2>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+            <X size={16} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label className="form-label">Current Password</label>
+            <input type="password" required className="form-input" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+          </div>
+          <div>
+            <label className="form-label">New Password</label>
+            <input type="password" required className="form-input" minLength={8} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          </div>
+          <div>
+            <label className="form-label">Confirm New Password</label>
+            <input type="password" required className="form-input" minLength={8} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <button type="button" onClick={onClose} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+            <button type="submit" disabled={mutation.isPending} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+              {mutation.isPending ? 'Updating…' : 'Update Password'}
             </button>
           </div>
         </form>
@@ -201,6 +262,7 @@ const ProfilePage = () => {
   const { user, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [addressForm, setAddressForm] = useState(null);   // null = closed, {} = add, {addr} = edit
 
   const deleteMutation = useMutation({
@@ -358,6 +420,52 @@ const ProfilePage = () => {
               </div>
             )}
           </div>
+          
+          {/* Security & Activity Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            {/* Security */}
+            <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+                <Lock size={20} color="var(--accent-blue)" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Security</h3>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+                Keep your account secure by using a strong password. You can update your password at any time.
+              </p>
+              <button onClick={() => setPasswordOpen(true)} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+                Change Password
+              </button>
+            </div>
+
+            {/* Account Activity */}
+            <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+                <Activity size={20} color="var(--accent-blue)" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Recent Activity</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent-blue)' }}>
+                    <History size={14} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>Logged in successfully</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Today at {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • Chrome (Windows)</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent-blue)' }}>
+                    <History size={14} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>Profile details updated</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>A few days ago</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -366,6 +474,11 @@ const ProfilePage = () => {
         {editOpen && (
           <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <EditProfileModal user={user} onClose={() => setEditOpen(false)} onSaved={(u) => setUser(u)} />
+          </motion.div>
+        )}
+        {passwordOpen && (
+          <motion.div key="password" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ChangePasswordModal onClose={() => setPasswordOpen(false)} />
           </motion.div>
         )}
         {addressForm !== null && (
