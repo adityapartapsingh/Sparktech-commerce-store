@@ -80,8 +80,8 @@ exports.CODOrderSchema = z.object({
 exports.CreateReviewSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
   rating:    z.number().int().min(1, 'Rating must be 1-5').max(5),
-  title:     z.string().min(2, 'Title is required').max(150).optional(),
-  comment:   z.string().min(10, 'Comment must be at least 10 characters').max(2000),
+  title:     z.string().min(2, 'Title is required').max(100),
+  comment:   z.string().min(10, 'Review must be at least 10 characters').max(2000),
 });
 
 // ── Category Schemas ────────────────────────────────────

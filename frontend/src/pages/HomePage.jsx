@@ -68,10 +68,10 @@ const HomePage = () => {
               Premium components for your next project. From Arduino to industrial sensors — we ship same-day with datasheets included.
             </motion.p>
             <motion.div variants={fadeUp} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <Link to="/products" className="btn btn-primary btn-lg">
-                Browse Products <ArrowRight size={18} />
+              <Link to="/shop" className="btn btn-primary btn-lg">
+                Browse Shop <ArrowRight size={18} />
               </Link>
-              <Link to="/products?featured=true" className="btn btn-outline btn-lg">
+              <Link to="/shop?featured=true" className="btn btn-outline btn-lg">
                 Featured Picks
               </Link>
             </motion.div>
@@ -128,7 +128,7 @@ const HomePage = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
             {CATEGORIES.map((cat, i) => (
               <motion.div key={cat.slug} initial="hidden" whileInView="show" viewport={{ once: true }} variants={fadeUp} transition={{ delay: i * 0.05 }}>
-                <Link to={`/products?category=${cat.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+                <Link to={`/shop?category=${cat.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
                   <div className="card" style={{ padding: '1.5rem', textAlign: 'center', cursor: 'pointer' }}>
                     <div style={{
                       width: 48, height: 48, borderRadius: 'var(--radius-md)',
@@ -152,10 +152,10 @@ const HomePage = () => {
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <div className="section-header" style={{ marginBottom: 0 }}>
-              <h2>Featured Products</h2>
+              <h2>Featured Picks</h2>
               <p>Hand-picked by our engineering team</p>
             </div>
-            <Link to="/products?featured=true" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+            <Link to="/shop?featured=true" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
               View All <ChevronRight size={16} />
             </Link>
           </div>
@@ -184,7 +184,7 @@ const HomePage = () => {
               type="search"
               title="No featured products yet"
               message="Check back soon — we're always adding new picks."
-              action={{ label: 'Browse All Products', to: '/products' }}
+              action={{ label: 'Browse Shop', to: '/shop' }}
             />
           )}
         </div>
@@ -198,7 +198,7 @@ const HomePage = () => {
               <h2>New Arrivals</h2>
               <p>The latest additions to our catalog</p>
             </div>
-            <Link to="/products?sort=newest" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+            <Link to="/shop?sort=newest" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
               View All <ChevronRight size={16} />
             </Link>
           </div>
@@ -224,10 +224,10 @@ const HomePage = () => {
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <div className="section-header" style={{ marginBottom: 0, textAlign: 'left' }}>
-              <h2>Top Rated Products</h2>
+              <h2>Top Rated</h2>
               <p>Highly recommended by our community</p>
             </div>
-            <Link to="/products?sort=rating" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+            <Link to="/shop?sort=rating" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
               View All <ChevronRight size={16} />
             </Link>
           </div>

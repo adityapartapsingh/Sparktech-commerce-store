@@ -68,7 +68,8 @@ const ProductSchema = new mongoose.Schema({
 // Indexes for filtering and search
 ProductSchema.index({ category: 1, basePrice: 1 });
 ProductSchema.index({ 'attributes.key': 1, 'attributes.value': 1 });
-ProductSchema.index({ name: 'text', tags: 'text', description: 'text' });
+ProductSchema.index({ name: 'text', sku: 'text', 'variants.sku': 'text', tags: 'text', description: 'text' });
+ProductSchema.index({ 'variants.sku': 1 });
 ProductSchema.index({ createdAt: -1 });
 
 // Strict Database-Level Validation: Ensure variant SKUs are strictly unique globally

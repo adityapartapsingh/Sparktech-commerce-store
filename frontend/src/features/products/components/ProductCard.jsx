@@ -53,7 +53,7 @@ const ProductCard = ({ product }) => {
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
     >
-      <Link to={`/products/${product.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <Link to={`/shop/${product.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
         <div className="card" style={{ overflow: 'hidden', height: '100%' }}>
           {/* Image */}
           <div style={{

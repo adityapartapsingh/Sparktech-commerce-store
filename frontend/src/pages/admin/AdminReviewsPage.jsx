@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Star, ChevronDown, ChevronUp, Trash2, Save, MessageSquare, ShieldCheck, Package, BarChart3 } from 'lucide-react';
+import { Search, Star, ChevronDown, ChevronUp, Trash2, Save, MessageSquare, ShieldCheck, Package, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../store/authStore';
 
 const SORT_OPTIONS = [
   { value: 'newest',      label: 'Newest First' },
@@ -46,6 +47,7 @@ const RatingBar = ({ rating, count, total }) => {
 };
 
 const AdminReviewsPage = () => {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [ratingFilter, setRatingFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
@@ -57,11 +59,13 @@ const AdminReviewsPage = () => {
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin-reviews', ratingFilter, sortBy, page],
     queryFn: async () => {
-      const params = { limit: 30, page, sort: sortBy };
+      const params = { limit: 10, page, sort: sortBy };
       if (ratingFilter) params.rating = ratingFilter;
       const res = await api.get('/admin/reviews', { params });
       return res.data.data;
-    }
+    },
+    enabled: !!user,
+    keepPreviousData: true
   });
 
   const remarkMutation = useMutation({
@@ -398,25 +402,22 @@ const AdminReviewsPage = () => {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="btn"
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', opacity: page <= 1 ? 0.4 : 1 }}
-          >
-            Previous
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem', padding: '1rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <button className="btn btn-outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem' }}>
+            <ChevronLeft size={18} />
           </button>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} reviews)
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-            disabled={page >= pagination.totalPages}
-            className="btn"
-            style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', opacity: page >= pagination.totalPages ? 0.4 : 1 }}
-          >
-            Next
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - page) <= 2)
+            .map((p, idx, arr) => (
+              <React.Fragment key={p}>
+                {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 40, height: 40, padding: 0 }}>
+                  {p}
+                </button>
+              </React.Fragment>
+            ))}
+          <button className="btn btn-outline" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem' }}>
+            <ChevronRight size={18} />
           </button>
         </div>
       )}

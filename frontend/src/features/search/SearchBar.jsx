@@ -46,7 +46,7 @@ const SearchBar = ({ onClose }) => {
     setIsOpen(false);
     setQuery('');
     if (onClose) onClose();
-    navigate(`/products/${product.slug}`);
+    navigate(`/shop/${product.slug}`);
   };
 
   const handleSubmit = (e) => {
@@ -54,7 +54,7 @@ const SearchBar = ({ onClose }) => {
     if (query.trim().length >= 2) {
       setIsOpen(false);
       if (onClose) onClose();
-      navigate(`/products?search=${encodeURIComponent(query.trim())}`);
+      navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
     }
   };
 

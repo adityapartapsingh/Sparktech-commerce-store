@@ -34,6 +34,7 @@ const AdminFeedbackPage  = lazy(() => import('./pages/admin/AdminFeedbackPage'))
 const AdminReviewsPage   = lazy(() => import('./pages/admin/AdminReviewsPage'));
 const AdminLogsPage      = lazy(() => import('./pages/admin/AdminLogsPage'));
 const AdminSettingsPage  = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const LoginPage    = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
@@ -43,6 +44,7 @@ const CartPage = lazy(() => import('./pages/CartPage'));
 const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 // Placeholder pages (you can build these out next)
 const NotFoundPage = () => (
@@ -144,10 +146,10 @@ function AppRoutes() {
           <Route path="/" element={
             <AppLayout><PageTransition><HomePage /></PageTransition></AppLayout>
           } />
-          <Route path="/products" element={
+          <Route path="/shop" element={
             <AppLayout><PageTransition><ProductListPage /></PageTransition></AppLayout>
           } />
-          <Route path="/products/:slug" element={
+          <Route path="/shop/:slug" element={
             <AppLayout><PageTransition><ProductDetailPage /></PageTransition></AppLayout>
           } />
           <Route path="/services" element={
@@ -193,6 +195,11 @@ function AppRoutes() {
               <PageTransition><OrderConfirmationPage /></PageTransition>
             </AppLayout></ProtectedRoute>
           } />
+          <Route path="/notifications" element={
+            <ProtectedRoute><AppLayout>
+              <PageTransition><NotificationsPage /></PageTransition>
+            </AppLayout></ProtectedRoute>
+          } />
 
           <Route path="/support" element={
             <AppLayout><PageTransition><SupportPage /></PageTransition></AppLayout>
@@ -220,6 +227,9 @@ function AppRoutes() {
           } />
           <Route path="/admin/reviews" element={
             <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminReviewsPage /></PageTransition></AdminLayout></ProtectedRoute>
+          } />
+          <Route path="/admin/categories" element={
+            <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminCategoriesPage /></PageTransition></AdminLayout></ProtectedRoute>
           } />
           <Route path="/admin/logs" element={
             <ProtectedRoute adminOnly><AdminLayout><PageTransition><AdminLogsPage /></PageTransition></AdminLayout></ProtectedRoute>

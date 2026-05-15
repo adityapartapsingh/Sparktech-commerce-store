@@ -41,10 +41,8 @@ const Navbar = () => {
 
   const navLinks = [
     { to: '/', label: 'Home' },
-    { to: '/products', label: 'Products' },
-    { to: '/products?featured=true', label: 'Featured' },
-    { to: '/products?category=microcontrollers', label: 'Microcontrollers' },
-    { to: '/products?category=sensors', label: 'Sensors' },
+    { to: '/shop', label: 'Shop' },
+    { to: '/shop?featured=true', label: 'Featured' },
     { to: '/services', label: 'Services' },
   ];
 
@@ -195,31 +193,49 @@ const Navbar = () => {
                             <p style={{ fontSize: '0.85rem' }}>No notifications</p>
                           </div>
                         ) : (
-                          notifications.map((n) => (
-                            <div key={n._id} style={{
-                              padding: '1rem', borderBottom: '1px solid var(--border)',
-                              background: n.read ? 'transparent' : 'rgba(59,130,246,0.05)',
-                              display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
-                            }}>
-                              <div style={{ flex: 1 }}>
-                                <p style={{ fontSize: '0.85rem', fontWeight: n.read ? 500 : 600, marginBottom: '0.2rem', color: 'var(--text-primary)' }}>{n.title}</p>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.message}</p>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
-                                  {new Date(n.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {!n.read && (
-                                  <button onClick={() => markAsRead(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '0.2rem' }} title="Mark as read">
-                                    <Check size={14} />
+                          <>
+                            {notifications.map((n) => (
+                              <div key={n._id} style={{
+                                padding: '1rem', borderBottom: '1px solid var(--border)',
+                                background: n.read ? 'transparent' : 'rgba(59,130,246,0.05)',
+                                opacity: n.read ? 0.65 : 1,
+                                display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                                transition: 'opacity 0.2s, background 0.2s'
+                              }}>
+                                <div style={{ flex: 1 }}>
+                                  {n.link ? (
+                                    <Link to={n.link} onClick={() => { if(!n.read) markAsRead(n._id); setNotifOpen(false); }} style={{ textDecoration: 'none' }}>
+                                      <p style={{ fontSize: '0.85rem', fontWeight: n.read ? 500 : 700, marginBottom: '0.2rem', color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</p>
+                                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.message}</p>
+                                    </Link>
+                                  ) : (
+                                    <>
+                                      <p style={{ fontSize: '0.85rem', fontWeight: n.read ? 500 : 700, marginBottom: '0.2rem', color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</p>
+                                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.message}</p>
+                                    </>
+                                  )}
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
+                                    {new Date(n.createdAt).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  {!n.read && (
+                                    <button onClick={() => markAsRead(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '0.2rem' }} title="Mark as read">
+                                      <Check size={14} />
+                                    </button>
+                                  )}
+                                  <button onClick={() => deleteNotification(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '0.2rem', opacity: 0.6 }} title="Delete">
+                                    <Trash2 size={14} />
                                   </button>
-                                )}
-                                <button onClick={() => deleteNotification(n._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '0.2rem' }} title="Delete">
-                                  <Trash2 size={14} />
-                                </button>
+                                </div>
                               </div>
+                            ))}
+                            <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)' }}>
+                                <Link to="/notifications" onClick={() => setNotifOpen(false)} style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-blue)', textDecoration: 'none' }}>
+                                  View Notification History
+                                </Link>
                             </div>
-                          ))
+                          </>
                         )}
                       </div>
                     </motion.div>

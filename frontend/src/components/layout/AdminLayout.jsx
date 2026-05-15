@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldPlus, LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Store, Menu, X, Terminal, MessageSquare, Star } from 'lucide-react';
+import { ShieldPlus, LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Store, Menu, X, Terminal, MessageSquare, Star, Layers } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const AdminLayout = ({ children }) => {
@@ -17,6 +17,7 @@ const AdminLayout = ({ children }) => {
   const navLinks = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Products', path: '/admin/products', icon: <Package size={20} /> },
+    { name: 'Categories', path: '/admin/categories', icon: <Layers size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={20} /> },
     { name: 'Customers', path: '/admin/customers', icon: <Users size={20} /> },
     { name: 'Feedback', path: '/admin/feedback', icon: <MessageSquare size={20} /> },
@@ -26,7 +27,7 @@ const AdminLayout = ({ children }) => {
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -53,7 +54,7 @@ const AdminLayout = ({ children }) => {
               </div>
             </div>
 
-            <nav style={{ flex: 1, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <nav style={{ flex: 1, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', minHeight: 0 }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
                 Main Menu
               </div>

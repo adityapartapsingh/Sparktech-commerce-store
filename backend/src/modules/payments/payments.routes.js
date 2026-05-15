@@ -71,6 +71,7 @@ router.post('/create-order', protect, validate(CreateOrderSchema), asyncHandler(
         name:         product.name,
         variantLabel: variant.label,
         image:        product.images?.[0],
+        sku:          variant.sku,
         price:        variant.price,
         quantity:     item.quantity,
       });
@@ -95,6 +96,7 @@ router.post('/create-order', protect, validate(CreateOrderSchema), asyncHandler(
         name:         product.name,
         variantLabel: variant.label,
         image:        product.images?.[0],
+        sku:          variant.sku,
         price:        variant.price,
         quantity:     item.quantity,
       });
@@ -234,7 +236,7 @@ router.post('/cod', protect, validate(CODOrderSchema), asyncHandler(async (req, 
       if (!variant) throw new AppError('Product variant not found', 404);
       if (variant.stock < item.quantity) throw new AppError(`Only ${variant.stock} of ${product.name} left in stock`, 400);
       totalAmount += variant.price * item.quantity;
-      orderItems.push({ product: product._id, variant: item.variant, name: product.name, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
+      orderItems.push({ product: product._id, variant: item.variant, name: product.name, sku: variant.sku, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
     }
   } else {
     for (const item of cartItems) {
@@ -244,7 +246,7 @@ router.post('/cod', protect, validate(CODOrderSchema), asyncHandler(async (req, 
       if (!variant) throw new AppError(`Variant not found for ${item.name}`, 404);
       if (variant.stock < item.quantity) throw new AppError(`Only ${variant.stock} of ${product.name} left in stock`, 400);
       totalAmount += variant.price * item.quantity;
-      orderItems.push({ product: product._id, variant: variant._id, name: product.name, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
+      orderItems.push({ product: product._id, variant: variant._id, name: product.name, sku: variant.sku, variantLabel: variant.label, image: product.images?.[0], price: variant.price, quantity: item.quantity });
     }
     await User.findByIdAndUpdate(req.user._id, { $set: { cart: cartItems.map(i => ({ product: i.productId, variant: i.variantId, quantity: i.quantity })) } });
   }

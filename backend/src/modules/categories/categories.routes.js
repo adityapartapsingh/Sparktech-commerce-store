@@ -19,6 +19,14 @@ router.get('/:slug', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
+  const { name } = req.body;
+  
+  // Check if name already exists
+  const existing = await Category.findOne({ name });
+  if (existing) {
+    throw new AppError(`Category "${name}" already exists`, 400);
+  }
+
   if (!req.body.slug) {
     req.body.slug = req.body.name.toLowerCase().replace(/\s+/g, '-');
   }
@@ -33,8 +41,13 @@ router.put('/:id', protect, authorize('admin', 'masteradmin'), asyncHandler(asyn
 }));
 
 router.delete('/:id', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
-  await Category.findByIdAndDelete(req.params.id);
-  sendSuccess(res, {}, 'Category deleted');
+  const categoryId = req.params.id;
+  // Delete the category itself
+  await Category.findByIdAndDelete(categoryId);
+  // Delete all subcategories
+  await Category.deleteMany({ parent: categoryId });
+  
+  sendSuccess(res, {}, 'Category and its subcategories deleted');
 }));
 
 module.exports = router;

@@ -112,7 +112,7 @@ const OrderConfirmationPage = () => {
           <Package size={18} /> View My Orders <ArrowRight size={16} />
         </button>
         <button
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/shop')}
           className="btn btn-outline"
           style={{ padding: '0.875rem 2rem', fontSize: '1rem', gap: '0.5rem' }}
         >

@@ -5,6 +5,7 @@ const Product = require('../../models/Product.model');
 const User = require('../../models/User.model');
 const Feedback = require('../../models/Feedback.model');
 const Review = require('../../models/Review.model');
+const Notification = require('../../models/Notification.model');
 const AppError = require('../../utils/AppError');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
@@ -257,6 +258,14 @@ router.patch('/feedback/:id', protect, authorize('admin', 'masteradmin'), asyncH
       senderName: req.user.name,
       message: adminNote
     });
+
+    await Notification.create({
+      user: feedback.user,
+      title: 'Support Ticket Update',
+      message: `An admin has replied to your ticket.`,
+      type: 'system',
+      link: '/support'
+    });
   }
 
   await feedback.save();
@@ -275,17 +284,29 @@ router.patch('/feedback/:id', protect, authorize('admin', 'masteradmin'), asyncH
 
 // List all orders that have a return request
 router.get('/returns', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
+  const page  = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Number(req.query.limit) || 20);
+  const skip  = (page - 1) * limit;
+
   const filter = { 'returnRequest.reason': { $exists: true, $ne: null } };
   if (req.query.status && ['pending','under_review','approved','rejected','completed'].includes(req.query.status)) {
     filter['returnRequest.status'] = req.query.status;
   }
 
-  const orders = await Order.find(filter)
-    .populate('user', 'name email phone')
-    .sort({ 'returnRequest.requestedAt': -1 })
-    .select('_id items totalAmount status shippingAddress returnRequest createdAt user');
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .populate('user', 'name email phone')
+      .sort({ 'returnRequest.requestedAt': -1 })
+      .select('_id items totalAmount status shippingAddress returnRequest createdAt user')
+      .skip(skip)
+      .limit(limit),
+    Order.countDocuments(filter)
+  ]);
 
-  sendSuccess(res, orders, 'Return requests fetched');
+  sendSuccess(res, {
+    orders,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  }, 'Return requests fetched');
 }));
 
 // Update return request status & admin note on an order
@@ -299,6 +320,14 @@ router.patch('/returns/:orderId', protect, authorize('admin', 'masteradmin'), as
     order.returnRequest.status = status;
     if (['approved','rejected','completed'].includes(status)) {
       order.returnRequest.resolvedAt = new Date();
+      
+      await Notification.create({
+        user: order.user,
+        title: `Return Request ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        message: `Your return request for order #${order._id.toString().substring(0,8).toUpperCase()} has been ${status}.`,
+        type: 'system',
+        link: '/orders'
+      });
     }
   }
   if (adminNote !== undefined) order.returnRequest.adminNote = adminNote;

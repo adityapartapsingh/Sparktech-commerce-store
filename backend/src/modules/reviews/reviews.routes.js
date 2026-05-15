@@ -48,34 +48,44 @@ router.post('/', protect, validate(CreateReviewSchema), asyncHandler(async (req,
   const { productId, rating, title, comment } = req.body;
   let { orderId } = req.body;
 
-  // If orderId is not explicitly provided (e.g., from Product Details Page), find the latest delivered order
+  // If orderId is not explicitly provided (e.g., from Product Details Page), find an unreviewed delivered order
   if (!orderId) {
-    const latestOrder = await Order.findOne({
+    const deliveredOrders = await Order.find({
       user: req.user._id,
       status: 'delivered',
       'items.product': productId,
     }).sort({ createdAt: -1 });
 
-    if (!latestOrder) {
+    if (deliveredOrders.length === 0) {
       throw new AppError('You can only review products from a delivered order', 403);
     }
-    orderId = latestOrder._id;
-  }
 
-  // Check purchase verification for this specific order
-  const deliveredOrder = await Order.findOne({
-    _id: orderId,
-    user: req.user._id,
-    status: 'delivered',
-    'items.product': productId,
-  });
-  if (!deliveredOrder) {
-    throw new AppError('You can only review products from a delivered order', 403);
-  }
+    const existingReviews = await Review.find({ product: productId, user: req.user._id });
+    const reviewedOrderIds = existingReviews.map(r => r.order.toString());
 
-  // Check duplicate for this specific order
-  const existing = await Review.findOne({ order: orderId, product: productId, user: req.user._id });
-  if (existing) throw new AppError('You have already reviewed this product from this order', 409);
+    const unreviewedOrder = deliveredOrders.find(o => !reviewedOrderIds.includes(o._id.toString()));
+
+    if (!unreviewedOrder) {
+      throw new AppError('You have already reviewed this product from all your orders', 409);
+    }
+    
+    orderId = unreviewedOrder._id;
+  } else {
+    // Check purchase verification for this specific order
+    const deliveredOrder = await Order.findOne({
+      _id: orderId,
+      user: req.user._id,
+      status: 'delivered',
+      'items.product': productId,
+    });
+    if (!deliveredOrder) {
+      throw new AppError('You can only review products from a delivered order', 403);
+    }
+
+    // Check duplicate for this specific order
+    const existing = await Review.findOne({ order: orderId, product: productId, user: req.user._id });
+    if (existing) throw new AppError('You have already reviewed this product from this order', 409);
+  }
 
   const review = await Review.create({
     product: productId,
@@ -110,7 +120,7 @@ router.patch('/:id/remark', protect, authorize('admin', 'masteradmin'), asyncHan
     adminRemarks: adminRemarks.trim(),
     remarkedBy: req.user._id,
     remarkedAt: new Date(),
-  }, { new: true }).populate('user', 'name avatar');
+  }, { returnDocument: 'after' }).populate('user', 'name avatar');
 
   if (!review) throw new AppError('Review not found', 404);
   sendSuccess(res, review, 'Admin remarks added');

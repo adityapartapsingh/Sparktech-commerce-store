@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, UserCheck, Mail, IndianRupee, Download, ChevronDown } from 'lucide-react';
+import { Search, UserCheck, Mail, IndianRupee, Download, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../store/authStore';
 import { exportData } from '../../lib/exportData';
 
 const AdminCustomersPage = () => {
+  const { user } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
 
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['admin-customers'],
+    queryKey: ['admin-customers', page],
     queryFn: async () => {
-      const res = await api.get('/users', { params: { limit: 100 } });
+      const res = await api.get('/users', { params: { page, limit: 10 } });
       return res.data;
-    }
+    },
+    enabled: !!user,
+    keepPreviousData: true
   });
 
   const customers = pageData?.data?.customers || [];
@@ -157,6 +162,28 @@ const AdminCustomersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pageData?.data?.pagination && pageData.data.pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem' }}>
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pageData.data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === pageData.data.pagination.totalPages || Math.abs(p - page) <= 2)
+              .map((p, idx, arr) => (
+                <React.Fragment key={p}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                  <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 40, height: 40, padding: 0 }}>
+                    {p}
+                  </button>
+                </React.Fragment>
+              ))}
+            <button className="btn btn-outline" disabled={page >= pageData.data.pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem' }}>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

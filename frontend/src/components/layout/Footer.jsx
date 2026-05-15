@@ -26,16 +26,16 @@ const Footer = () => (
           </p>
         </div>
 
-        {/* Products */}
+        {/* Shop */}
         <div>
-          <h4 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Products</h4>
+          <h4 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Shop</h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {[
-              ['All Products', '/products'],
-              ['Microcontrollers', '/products?category=microcontrollers'],
-              ['Sensors', '/products?category=sensors'],
-              ['Motors', '/products?category=motors'],
-              ['Featured', '/products?featured=true'],
+              ['All Shop', '/shop'],
+              ['Microcontrollers', '/shop?category=microcontrollers'],
+              ['Sensors', '/shop?category=sensors'],
+              ['Motors', '/shop?category=motors'],
+              ['Featured', '/shop?featured=true'],
             ].map(([label, to]) => (
               <li key={label}>
                 <Link to={to} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.85rem', transition: 'var(--transition)' }}

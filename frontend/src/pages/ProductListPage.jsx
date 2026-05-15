@@ -55,20 +55,40 @@ const SidebarFilters = ({ categoriesData, category, brand, minPrice, maxPrice, f
             transition: 'all 0.15s',
           }}
         >
-          <Layers size={14} /> All Categories
+          <Layers size={14} /> Shop All
         </button>
-        {(categoriesData || []).map((cat) => (
-          <button key={cat.slug} onClick={() => { setParam('category', cat.slug); if (isMobile) onClose?.(); }}
-            style={{
-              display: 'block', width: '100%', textAlign: 'left', padding: '0.55rem 0.75rem',
-              borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.88rem', marginBottom: 3,
-              background: category === cat.slug ? 'rgba(59,130,246,0.1)' : 'transparent',
-              color: category === cat.slug ? 'var(--accent-blue)' : 'var(--text-secondary)',
-              fontWeight: category === cat.slug ? 600 : 400,
-              transition: 'all 0.15s',
-            }}>
-            {cat.name}
-          </button>
+        
+        {(categoriesData || []).filter(c => !c.parent).map((cat) => (
+          <div key={cat._id}>
+            <button onClick={() => { setParam('category', cat.slug); if (isMobile) onClose?.(); }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left', padding: '0.55rem 0.75rem',
+                borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.88rem', marginBottom: 3,
+                background: category === cat.slug ? 'rgba(59,130,246,0.1)' : 'transparent',
+                color: category === cat.slug ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                fontWeight: category === cat.slug ? 600 : 400,
+                transition: 'all 0.15s',
+              }}>
+              {cat.name}
+            </button>
+            
+            {/* Show subcategories if parent is selected or if we want them always visible */}
+            <div style={{ paddingLeft: '1.25rem', marginBottom: 8 }}>
+              {categoriesData.filter(sub => sub.parent?._id === cat._id || sub.parent === cat._id).map(sub => (
+                <button key={sub._id} onClick={() => { setParam('category', sub.slug); if (isMobile) onClose?.(); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left', padding: '0.35rem 0.75rem',
+                    borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', marginBottom: 2,
+                    background: category === sub.slug ? 'rgba(59,130,246,0.06)' : 'transparent',
+                    color: category === sub.slug ? 'var(--accent-blue)' : 'var(--text-muted)',
+                    fontWeight: category === sub.slug ? 600 : 400,
+                    transition: 'all 0.15s',
+                  }}>
+                  — {sub.name}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -169,8 +189,8 @@ const ProductListPage = () => {
   return (
     <div style={{ paddingTop: '5rem' }}>
       <Helmet>
-        <title>All Products & Components | SparkTech</title>
-        <meta name="description" content="Browse our entire catalog of microcontrollers, sensors, actuators, and power modules. Filter by category, brand, and price." />
+        <title>Shop All Components | SparkTech</title>
+        <meta name="description" content="Browse our entire shop catalog of microcontrollers, sensors, actuators, and power modules. Filter by category, brand, and price." />
       </Helmet>
       
       {/* Header */}
@@ -179,7 +199,7 @@ const ProductListPage = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: '1.6rem' }}>
-                {search ? `Search: "${search}"` : category ? category.charAt(0).toUpperCase() + category.slice(1) : 'All Products'}
+                {search ? `Search: "${search}"` : category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Shop'}
               </h1>
               {data && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{data.pagination?.total} products</p>}
             </div>
@@ -246,7 +266,7 @@ const ProductListPage = () => {
               <div style={{ padding: '3rem 0' }}>
                 <FallbackState
                   type="search"
-                  title="No products found"
+                  title="No items found"
                   message="Try adjusting your filters or search terms to find what you're looking for."
                   onRetry={() => setSearchParams({})}
                 />

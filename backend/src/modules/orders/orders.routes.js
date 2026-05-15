@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Order = require('../../models/Order.model');
 const Product = require('../../models/Product.model');
@@ -16,10 +17,35 @@ const { sendCancellationSMS, sendShippedSMS } = require('../../utils/sms.service
 
 // Customer: get own orders
 router.get('/my', protect, asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id })
-    .populate('user', 'name email')
-    .sort({ createdAt: -1 });
-  sendSuccess(res, orders, 'Orders fetched');
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Number(req.query.limit) || 10);
+  const skip = (page - 1) * limit;
+
+  const filter = { user: req.user._id };
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search, 'i');
+    filter.$or = [
+      { 'items.name': searchRegex },
+      { 'items.sku': searchRegex }
+    ];
+    if (mongoose.Types.ObjectId.isValid(req.query.search)) {
+      filter.$or.push({ _id: req.query.search });
+    }
+  }
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Order.countDocuments(filter),
+  ]);
+
+  sendSuccess(res, {
+    orders,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  }, 'Orders fetched');
 }));
 
 // Customer: get single order
@@ -39,11 +65,53 @@ router.get('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async (
   const skip = (page - 1) * limit;
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
+
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search, 'i');
+    const searchFilter = {
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(req.query.search) ? req.query.search : undefined },
+        { 'user.name': searchRegex },
+        { 'user.email': searchRegex },
+        { 'items.name': searchRegex },
+        { 'items.sku': searchRegex }
+      ].filter(f => f._id !== undefined || !f._id)
+    };
+
+    // If searching by customer info, we need to join users first or use a more complex aggregate.
+    // However, since we are using find().populate(), searching in populated fields directly in find() 
+    // doesn't work in Mongoose/MongoDB without aggregation or manually fetching IDs.
+    
+    // Simplest way for now: search order ID and item info. 
+    // For user info, we would normally need to fetch user IDs first.
+    
+    filter.$or = [
+      { 'items.name': searchRegex },
+      { 'items.sku': searchRegex }
+    ];
+    
+    if (mongoose.Types.ObjectId.isValid(req.query.search)) {
+      filter.$or.push({ _id: req.query.search });
+    }
+    
+    // If you want to search by user name, we need to fetch user IDs first
+    const matchingUsers = await User.find({ 
+      $or: [{ name: searchRegex }, { email: searchRegex }] 
+    }).select('_id');
+    
+    if (matchingUsers.length > 0) {
+      filter.$or.push({ user: { $in: matchingUsers.map(u => u._id) } });
+    }
+  }
+
   const [orders, total] = await Promise.all([
     Order.find(filter).populate('user', 'name email').sort({ createdAt: -1 }).skip(skip).limit(limit),
     Order.countDocuments(filter),
   ]);
-  sendSuccess(res, { orders, total, page }, 'All orders fetched');
+  sendSuccess(res, {
+    orders,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  }, 'All orders fetched');
 }));
 
 // Admin: update order status
@@ -57,7 +125,7 @@ router.patch('/:id/status', protect, authorize('admin', 'masteradmin'), validate
   if (!order) throw new AppError('Order not found', 404);
 
   // Send notification to user
-  if (['shipped', 'delivered'].includes(status)) {
+  if (['shipped', 'delivered', 'cancelled'].includes(status)) {
     await Notification.create({
       user: order.user,
       title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
@@ -163,7 +231,7 @@ router.put('/:id/delivery', protect, authorize('admin', 'masteradmin'), asyncHan
   const updatedOrder = await Order.findByIdAndUpdate(
     req.params.id,
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   // Send shipped SMS with tracking info (non-blocking)

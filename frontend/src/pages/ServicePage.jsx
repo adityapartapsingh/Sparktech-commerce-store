@@ -72,7 +72,7 @@ const ServicePage = () => (
             <Link to="/support" className="btn btn-primary btn-lg">
               <Headphones size={18} /> Get in Touch
             </Link>
-            <Link to="/products" className="btn btn-outline btn-lg">
+            <Link to="/shop" className="btn btn-outline btn-lg">
               Browse Components <ArrowRight size={18} />
             </Link>
           </motion.div>

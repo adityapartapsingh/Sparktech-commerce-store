@@ -234,7 +234,7 @@ const CheckoutPage = () => {
       <div className="container" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
         <Zap size={48} color="var(--text-muted)" />
         <h2>Your cart is empty</h2>
-        <button onClick={() => navigate('/products')} className="btn btn-primary">Browse Products</button>
+        <button onClick={() => navigate('/shop')} className="btn btn-primary">Browse Shop</button>
       </div>
     );
   }

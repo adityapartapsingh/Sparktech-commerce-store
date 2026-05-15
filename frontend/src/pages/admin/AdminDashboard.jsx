@@ -47,7 +47,8 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const res = await api.get('/admin/dashboard');
       return res.data.data;
-    }
+    },
+    enabled: !!user
   });
 
   if (isLoading) {
@@ -99,8 +100,8 @@ const AdminDashboard = () => {
             <CalendarDays color="var(--accent-blue)" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Revenue Trend (Last 30 Days)</h3>
           </div>
-          <div style={{ height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 300, minWidth: 0 }}>
+            <ResponsiveContainer width="99%" height="100%">
               <LineChart data={trendData || []} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
@@ -170,8 +171,8 @@ const AdminDashboard = () => {
         {/* Orders by Status */}
         <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2rem' }}>Orders by Status</h3>
-          <div style={{ height: 250 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: 250, minWidth: 0 }}>
+            <ResponsiveContainer width="99%" height="100%">
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />

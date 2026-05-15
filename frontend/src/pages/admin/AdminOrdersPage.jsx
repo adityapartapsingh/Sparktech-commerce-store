@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Calendar, Download, ChevronDown, ChevronUp, FileText, Truck, ExternalLink, Eye, RotateCcw, Save } from 'lucide-react';
+import { Search, MapPin, Calendar, Download, ChevronDown, ChevronUp, FileText, Truck, ExternalLink, Eye, RotateCcw, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../store/authStore';
 import { exportData } from '../../lib/exportData';
 import InvoiceModal from '../../components/InvoiceModal';
 import OrderTimeline from '../../components/OrderTimeline';
@@ -131,6 +132,7 @@ const OrderDetailModal = ({ order, onClose }) => {
 };
 
 const AdminOrdersPage = () => {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -141,6 +143,7 @@ const AdminOrdersPage = () => {
   const [viewDetailOrder, setViewDetailOrder] = useState(null);
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [returnNote, setReturnNote] = useState({});
+  const [page, setPage] = useState(1);
   
   // Bulk selection state
   const [selectedOrders, setSelectedOrders] = useState(new Set());
@@ -156,11 +159,13 @@ const AdminOrdersPage = () => {
   };
 
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['admin-orders', statusFilter],
+    queryKey: ['admin-orders', statusFilter, searchTerm, page],
     queryFn: async () => {
-      const res = await api.get('/orders', { params: { status: statusFilter, limit: 100 } });
+      const res = await api.get('/orders', { params: { status: statusFilter, search: searchTerm, page, limit: 10 } });
       return res.data;
-    }
+    },
+    enabled: !!user,
+    keepPreviousData: true
   });
 
   const orders = pageData?.data?.orders || [];
@@ -623,6 +628,28 @@ const AdminOrdersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pageData?.data?.pagination && pageData.data.pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem' }}>
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pageData.data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === pageData.data.pagination.totalPages || Math.abs(p - page) <= 2)
+              .map((p, idx, arr) => (
+                <React.Fragment key={p}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                  <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 40, height: 40, padding: 0 }}>
+                    {p}
+                  </button>
+                </React.Fragment>
+              ))}
+            <button className="btn btn-outline" disabled={page >= pageData.data.pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem' }}>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Detail Modal */}

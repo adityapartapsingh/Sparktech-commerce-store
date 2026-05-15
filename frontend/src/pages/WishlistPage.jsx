@@ -7,10 +7,12 @@ import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 
 import api from '../lib/axios';
+import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
 import FallbackState from '../components/ui/FallbackState';
 
 const WishlistPage = () => {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addItem } = useCartStore();
@@ -21,6 +23,7 @@ const WishlistPage = () => {
       const res = await api.get('/wishlist');
       return res.data.data;
     },
+    enabled: !!user
   });
 
   const toggleMutation = useMutation({
@@ -67,7 +70,7 @@ const WishlistPage = () => {
   return (
     <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
       <Helmet>
-        <title>Wishlist ({wishlist.length}) | SparkTech</title>
+        <title>{`Wishlist (${wishlist.length}) | SparkTech`}</title>
         <meta name="description" content="Your saved products on SparkTech." />
       </Helmet>
 
@@ -91,7 +94,7 @@ const WishlistPage = () => {
           type="wishlist"
           title="Your wishlist is empty"
           message="Save items you love and come back to them later."
-          action={{ label: 'Browse Products', to: '/products' }}
+          action={{ label: 'Browse Shop', to: '/shop' }}
         />
       ) : (
         <div className="product-grid">
@@ -113,7 +116,7 @@ const WishlistPage = () => {
                 >
                   {/* Image */}
                   <div style={{ position: 'relative', aspectRatio: '1/1', background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-                    <Link to={`/products/${product.slug}`}>
+                    <Link to={`/shop/${product.slug}`}>
                       {product.images?.[0]
                         ? <img src={product.images[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }} />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -140,7 +143,7 @@ const WishlistPage = () => {
                     <p style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '0.25rem' }}>
                       {product.brand}
                     </p>
-                    <Link to={`/products/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Link to={`/shop/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <h3 style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.3, marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {product.name}
                       </h3>

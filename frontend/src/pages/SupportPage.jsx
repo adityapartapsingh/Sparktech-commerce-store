@@ -127,11 +127,15 @@ const SupportPage = () => {
             <textarea
               className="input"
               rows={5}
-              placeholder={TYPE_CONFIG[activeType].desc + ' (min 10 characters)...'}
+              placeholder={TYPE_CONFIG[activeType].desc + '...'}
               value={message}
               onChange={e => setMessage(e.target.value)}
+              maxLength={2000}
               style={{ resize: 'vertical' }}
             />
+            <p style={{ fontSize: '0.75rem', color: message.length < 10 ? 'var(--accent-red)' : 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
+              {message.length}/2000 chars (min 10)
+            </p>
           </div>
 
           {/* Confidentiality notice */}

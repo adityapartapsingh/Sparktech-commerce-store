@@ -6,6 +6,7 @@ const OrderItemSchema = new mongoose.Schema({
   name:         String,          // snapshot at purchase time
   variantLabel: String,
   image:        String,
+  sku:          String,
   price:        { type: Number, required: true },
   quantity:     { type: Number, required: true, min: 1 },
 }, { _id: false });

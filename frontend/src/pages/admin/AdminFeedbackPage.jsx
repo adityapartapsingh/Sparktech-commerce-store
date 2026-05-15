@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MessageSquare, ChevronDown, ChevronUp, Star, Save, CheckCircle2, Clock, AlertTriangle, ThumbsUp } from 'lucide-react';
+import { Search, MessageSquare, ChevronDown, ChevronUp, Star, Save, CheckCircle2, Clock, AlertTriangle, ThumbsUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../store/authStore';
 
 const TYPE_CONFIG = {
   complaint:  { label: 'Complaint',  color: 'var(--accent-red)',    icon: AlertTriangle, bg: 'rgba(239,68,68,0.08)' },
@@ -19,22 +20,26 @@ const STATUS_CONFIG = {
 };
 
 const AdminFeedbackPage = () => {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [adminNote, setAdminNote] = useState('');
+  const [page, setPage] = useState(1);
 
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['admin-feedback', typeFilter, statusFilter],
+    queryKey: ['admin-feedback', typeFilter, statusFilter, page],
     queryFn: async () => {
-      const params = { limit: 100 };
+      const params = { page, limit: 10 };
       if (typeFilter) params.type = typeFilter;
       if (statusFilter) params.status = statusFilter;
       const res = await api.get('/admin/feedback', { params });
       return res.data.data;
-    }
+    },
+    enabled: !!user,
+    keepPreviousData: true
   });
 
   const updateMutation = useMutation({
@@ -290,6 +295,28 @@ const AdminFeedbackPage = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pageData?.pagination && pageData.pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem' }}>
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pageData.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === pageData.pagination.totalPages || Math.abs(p - page) <= 2)
+              .map((p, idx, arr) => (
+                <React.Fragment key={p}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                  <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 40, height: 40, padding: 0 }}>
+                    {p}
+                  </button>
+                </React.Fragment>
+              ))}
+            <button className="btn btn-outline" disabled={page >= pageData.pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem' }}>
+              <ChevronRight size={18} />
+            </button>
           </div>
         )}
       </div>

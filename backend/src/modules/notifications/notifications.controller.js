@@ -8,22 +8,27 @@ exports.getNotifications = asyncHandler(async (req, res) => {
   const limit = Math.min(50, Number(req.query.limit) || 10);
   const skip = (page - 1) * limit;
 
-  const [notifications, unreadCount] = await Promise.all([
+  const [notifications, unreadCount, total] = await Promise.all([
     Notification.find({ user: req.user._id })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
-    Notification.countDocuments({ user: req.user._id, read: false })
+    Notification.countDocuments({ user: req.user._id, read: false }),
+    Notification.countDocuments({ user: req.user._id })
   ]);
 
-  sendSuccess(res, { notifications, unreadCount }, 'Notifications fetched');
+  sendSuccess(res, {
+    notifications,
+    unreadCount,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  }, 'Notifications fetched');
 });
 
 exports.markAsRead = asyncHandler(async (req, res) => {
   const notification = await Notification.findOneAndUpdate(
     { _id: req.params.id, user: req.user._id },
     { read: true },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!notification) throw new AppError('Notification not found', 404);

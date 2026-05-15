@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Terminal, RefreshCw, AlertTriangle, Info, Search, ShieldAlert, Cpu } from 'lucide-react';
 import api from '../../lib/axios';
+import { useAuthStore } from '../../store/authStore';
 
 const AdminLogsPage = () => {
+  const { user } = useAuthStore();
   const [logType, setLogType] = useState('combined');
   const [limit, setLimit] = useState(100);
   const [search, setSearch] = useState('');
@@ -15,6 +17,7 @@ const AdminLogsPage = () => {
       const res = await api.get(`/admin/logs?type=${logType}&limit=${limit}`);
       return res.data.data;
     },
+    enabled: !!user,
     refetchInterval: 10000, // Auto-refresh every 10 seconds for live tailing
   });
 

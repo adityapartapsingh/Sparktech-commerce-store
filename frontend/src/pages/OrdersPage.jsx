@@ -1,38 +1,17 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PackageOpen, Clock, CheckCircle2, Truck, XCircle,
-  ChevronRight, FileText, RotateCcw, X, ExternalLink,
-  CreditCard, RefreshCw, Star
+  X, CreditCard, Star, ChevronDown, ChevronLeft, ChevronRight, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
 import InvoiceModal from '../components/InvoiceModal';
 import OrderTimeline from '../components/OrderTimeline';
-
-/* ── Status Badge ─────────────────────────────────────── */
-const StatusBadge = ({ status }) => {
-  const config = {
-    pending:    { color: 'var(--accent-amber)', icon: Clock,         label: 'Pending Payment' },
-    paid:       { color: 'var(--accent-blue)',  icon: CheckCircle2,  label: 'Confirmed' },
-    processing: { color: 'var(--accent-blue)',  icon: PackageOpen,   label: 'Processing' },
-    shipped:    { color: 'var(--accent-blue)',  icon: Truck,         label: 'Shipped' },
-    delivered:  { color: 'var(--accent-green)', icon: CheckCircle2,  label: 'Delivered' },
-    cancelled:  { color: 'var(--accent-red)',   icon: XCircle,       label: 'Cancelled' },
-    refunded:   { color: 'var(--text-muted)',   icon: XCircle,       label: 'Refunded' },
-  };
-  const c = config[status] || config.pending;
-  const Icon = c.icon;
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.75rem', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600, color: c.color, backgroundColor: `${c.color}15`, border: `1px solid ${c.color}30` }}>
-      <Icon size={14} />{c.label}
-    </span>
-  );
-};
 
 /* ── Cancel Modal ─────────────────────────────────────── */
 const CANCEL_REASONS = [
@@ -165,16 +144,22 @@ const ReviewModal = ({ product, onClose }) => {
           </div>
           
           <div>
-            <label className="form-label">Review Title (optional)</label>
+            <label className="form-label">Review Title *</label>
             <input type="text" className="input" placeholder="Summarize your experience" value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
+            <p style={{ fontSize: '0.75rem', color: title.length < 2 ? 'var(--accent-red)' : 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
+              {title.length}/100 chars (min 2)
+            </p>
           </div>
 
           <div>
-            <label className="form-label">Review (optional)</label>
+            <label className="form-label">Review *</label>
             <textarea className="input" rows={4} placeholder="What did you like or dislike? How did it fit?" value={comment} onChange={e => setComment(e.target.value)} maxLength={2000} style={{ resize: 'vertical' }} />
+            <p style={{ fontSize: '0.75rem', color: comment.length < 10 ? 'var(--accent-red)' : 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
+              {comment.length}/2000 chars (min 10)
+            </p>
           </div>
 
-          <button onClick={() => mutation.mutate()} disabled={!rating || mutation.isPending} className="btn btn-primary" style={{ justifyContent: 'center', padding: '0.85rem' }}>
+          <button onClick={() => mutation.mutate()} disabled={!rating || title.length < 2 || comment.length < 10 || mutation.isPending} className="btn btn-primary" style={{ justifyContent: 'center', padding: '0.85rem' }}>
             {mutation.isPending ? 'Submitting...' : 'Submit Review'}
           </button>
         </div>
@@ -405,12 +390,20 @@ const OrdersPage = () => {
   const [returnOrder,  setReturnOrder]  = useState(null);
   const [cancelOrder,  setCancelOrder]  = useState(null);
   const [reviewProduct, setReviewProduct] = useState(null);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ['my-orders'],
-    queryFn: () => api.get('/orders/my').then(r => r.data.data),
+  const { data: pageData, isLoading } = useQuery({
+    queryKey: ['my-orders', searchTerm, page],
+    queryFn: () => api.get('/orders/my', { params: { search: searchTerm, page, limit: 10 } }).then(r => r.data.data),
     enabled: !!user,
+    keepPreviousData: true
   });
+
+  const orders = pageData?.orders || [];
+  const pagination = pageData?.pagination;
 
   const { data: reviewedItems = [] } = useQuery({
     queryKey: ['my-reviewed-items'], // change queryKey to avoid cache conflicts with old format
@@ -420,9 +413,36 @@ const OrdersPage = () => {
 
   const cancelMutation = useMutation({
     mutationFn: ({ orderId, reason, comment }) => api.post(`/orders/${orderId}/cancel`, { reason, comment }),
-    onSuccess: () => { toast.success('Order cancelled.'); queryClient.invalidateQueries(['my-orders']); setCancelOrder(null); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Could not cancel order'),
+    onSuccess: () => {
+      toast.success('Order cancelled.');
+      queryClient.invalidateQueries(['my-orders']);
+      setCancelOrder(null);
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Could not cancel order'),
   });
+
+  const filteredOrders = (orders || []).filter((order) => {
+    // Tab filter
+    if (activeTab === 'ongoing' && ['delivered', 'cancelled', 'refunded', 'returned'].includes(order.status)) return false;
+    if (activeTab === 'delivered' && order.status !== 'delivered') return false;
+    if (activeTab === 'cancelled' && !['cancelled', 'refunded'].includes(order.status)) return false;
+
+    // Search filter
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const matchesId = order._id.toLowerCase().includes(s);
+      const matchesProduct = order.items.some((item) => item.name.toLowerCase().includes(s));
+      return matchesId || matchesProduct;
+    }
+    return true;
+  });
+
+  const TABS = [
+    { id: 'all', label: 'All Orders' },
+    { id: 'ongoing', label: 'Ongoing' },
+    { id: 'delivered', label: 'Delivered' },
+    { id: 'cancelled', label: 'Cancelled' },
+  ];
 
   return (
     <div className="container" style={{ padding: '3rem 1rem', minHeight: '80vh' }}>
@@ -430,9 +450,43 @@ const OrdersPage = () => {
         <title>My Orders | SparkTech</title>
         <meta name="description" content="View and manage your SparkTech orders, track shipments, and request returns." />
       </Helmet>
-      <div style={{ marginBottom: '2.5rem' }}>
-        <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '2.2rem', marginBottom: '0.5rem' }}>Your Orders</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Welcome back, {user?.name || 'Customer'}. Here is your order history.</p>
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1.5rem' }}>
+        <div>
+          <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: '2.2rem', marginBottom: '0.4rem' }}>Your Orders</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Track, manage and review your purchases.</p>
+        </div>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
+          <Clock size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Search by product or Order ID..." 
+            className="input" 
+            style={{ paddingLeft: '2.5rem', height: '2.5rem', fontSize: '0.9rem' }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '2rem', gap: '2rem' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '0.75rem 0', background: 'none', border: 'none', cursor: 'pointer',
+              color: activeTab === tab.id ? 'var(--accent-blue)' : 'var(--text-muted)',
+              fontWeight: activeTab === tab.id ? 700 : 500,
+              fontSize: '0.95rem',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent-blue)' : '2px solid transparent',
+              transition: 'all 0.2s'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {isLoading ? (
@@ -440,231 +494,206 @@ const OrdersPage = () => {
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--accent-blue)' }} />
         </div>
-      ) : !orders || orders.length === 0 ? (
-        <div style={{ background: 'var(--bg-card)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '4rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <PackageOpen size={48} color="var(--text-muted)" style={{ opacity: 0.5 }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>No orders yet</h3>
-          <p style={{ color: 'var(--text-secondary)' }}>You haven't placed any orders yet.</p>
-          <button onClick={() => navigate('/products')} className="btn btn-primary" style={{ marginTop: '0.5rem' }}>Start Shopping</button>
+      ) : filteredOrders.length === 0 ? (
+        <div style={{ background: 'var(--bg-card)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '5rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PackageOpen size={32} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.3rem' }}>{searchTerm ? 'No matching orders' : 'No orders found'}</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{searchTerm ? 'Try a different search term or check other tabs.' : 'You haven\'t placed any orders in this category yet.'}</p>
+          </div>
+          <button onClick={() => navigate('/shop')} className="btn btn-primary" style={{ marginTop: '0.5rem' }}>Browse Shop</button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <AnimatePresence>
-            {orders.map((order, idx) => (
+            {filteredOrders.map((order, idx) => (
               <motion.div key={order._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
 
-                {/* Header */}
-                <div style={{ padding: '1.25rem 1.5rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+                {/* Card Header — Amazon Style */}
+                <div style={{ padding: '0.75rem 1.5rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2.5rem' }}>
                     <div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Order Placed</p>
-                      <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Order Placed</p>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 500 }}>{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Total</p>
-                      <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-blue)' }}>₹{order.totalAmount.toLocaleString('en-IN')}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Total</p>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>₹{order.totalAmount.toLocaleString('en-IN')}</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Payment</p>
-                      <p style={{ fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {order.paymentInfo?.method === 'cod' ? <><Truck size={14} /> COD</> : <><CreditCard size={14} /> Razorpay</>}
-              </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Order ID</p>
-                      <p style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>#{order._id.slice(-8).toUpperCase()}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Ship To</p>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'help' }} title={order.shippingAddress?.address}>
+                        {user?.name} <ChevronDown size={14} />
+                      </p>
                     </div>
                   </div>
-                  <StatusBadge status={order.status} />
-                </div>
-
-                {/* Timeline */}
-                
-                {/* Delivery Info Snippet */}
-                {order.deliveryInfo?.estimatedDelivery && !['delivered', 'cancelled', 'returned'].includes(order.status) && (
-                  <div style={{ padding: '0.75rem 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.95rem' }}>
-                    <Truck size={16} color="var(--accent-blue)" />
-                    Arriving by {new Date(order.deliveryInfo.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {order.deliveryInfo.provider && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500, marginLeft: '0.5rem' }}>via {order.deliveryInfo.provider}</span>}
-                  </div>
-                )}
-
-                <div style={{ padding: '0.5rem 1.5rem 0' }}>
-                  <OrderTimeline status={order.status} />
-                </div>
-
-                {/* Delivery Feedback Banner */}
-                {order.status === 'delivered' && (
-                  <div style={{ margin: '1rem 1.5rem 0', padding: '0.75rem 1rem', background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.3)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Star size={20} color="var(--accent-amber)" />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Your order was delivered!</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Please take a moment to rate the products below. Have an issue? You can submit feedback in the Support Portal.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Items */}
-                <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {order.items.map(item => (
-                    <div key={`${item.product}-${item.variant}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--bg-elevated)', flexShrink: 0, overflow: 'hidden' }}>
-                        {item.image && <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.variantLabel} × {item.quantity}</p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>₹{(item.price * item.quantity).toLocaleString('en-IN')}</div>
-                        {order.status === 'delivered' && (
-                          reviewedItems.some(r => r.order === order._id && r.product === item.product) ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: 99, background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border)', fontWeight: 600 }}>
-                              <CheckCircle2 size={12} /> Reviewed
-                            </span>
-                          ) : (
-                            <button onClick={() => setReviewProduct({ id: item.product, name: item.name, orderId: order._id })} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: 99, background: 'rgba(255,184,0,0.1)', color: 'var(--accent-amber)', border: '1px solid rgba(255,184,0,0.3)', cursor: 'pointer', fontWeight: 600 }}>
-                              <Star size={12} /> Write Review
-                            </button>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Return request card — only show when there is real data */}
-                {order.returnRequest?.status && order.returnRequest?.reason && (() => {
-                  const rr = order.returnRequest;
-                  const typeName = rr.type ? (rr.type.charAt(0).toUpperCase() + rr.type.slice(1)) : 'Return';
-                  const statusCfg = {
-                    pending:      { label: 'Submitted',    color: 'var(--accent-amber)',  bg: 'rgba(255,184,0,0.08)',  border: 'rgba(255,184,0,0.3)',  step: 0 },
-                    under_review: { label: 'Under Review', color: 'var(--accent-blue)',   bg: 'rgba(0,212,255,0.07)', border: 'rgba(0,212,255,0.25)', step: 1 },
-                    approved:     { label: 'Approved',      color: 'var(--accent-green)',  bg: 'rgba(16,185,129,0.08)',border: 'rgba(16,185,129,0.3)', step: 2 },
-                    rejected:     { label: 'Rejected',     color: 'var(--accent-red)',    bg: 'rgba(239,68,68,0.07)', border: 'rgba(239,68,68,0.25)',step: 2 },
-                    completed:    { label: 'Completed',    color: 'var(--text-muted)',    bg: 'var(--bg-secondary)',   border: 'var(--border)',        step: 3 },
-                  };
-                  const cfg = statusCfg[rr.status] || statusCfg.pending;
-                  const rrSteps = ['Submitted','Under Review','Decision','Completed'];
-                  return (
-                    <div style={{ margin: '0 1.5rem 1rem', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                      {/* Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: cfg.color }}>
-                          {typeName} Request
-                        </p>
-                        <span style={{ padding: '0.2rem 0.7rem', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                          {cfg.label}
-                        </span>
-                      </div>
-                      {/* Mini tracker */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', position: 'relative', marginBottom: '1rem' }}>
-                        {/* background line */}
-                        <div style={{ position: 'absolute', top: 10, left: '12.5%', right: '12.5%', height: 2, background: 'rgba(255,255,255,0.1)' }} />
-                        {/* active fill */}
-                        <div style={{ position: 'absolute', top: 10, left: '12.5%', height: 2, width: `${(cfg.step / (rrSteps.length-1)) * 75}%`, background: cfg.color, transition: 'width 0.4s' }} />
-                        {rrSteps.map((s, i) => {
-                          const done   = i < cfg.step;
-                          const active = i === cfg.step;
-                          const isRejected = rr.status === 'rejected' && i === 2;
-                          return (
-                            <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                              <div style={{ width: 20, height: 20, borderRadius: '50%', background: isRejected ? 'var(--accent-red)' : done || active ? cfg.color : 'var(--bg-elevated)', border: `2px solid ${isRejected ? 'var(--accent-red)' : done || active ? cfg.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
-                                {isRejected ? '✕' : done ? '✓' : ''}
-                              </div>
-                              <p style={{ fontSize: '0.62rem', marginTop: '0.25rem', textAlign: 'center', color: active ? cfg.color : done ? 'var(--text-secondary)' : 'var(--text-muted)', fontWeight: active ? 700 : 400 }}>{s}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {/* Details grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '0.5rem 1.5rem', fontSize: '0.82rem' }}>
-                        {rr.reason && (<div><span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reason</span><p style={{ fontWeight: 500, marginTop: '0.1rem' }}>{rr.reason}</p></div>)}
-                        {rr.preferredResolution && (<div><span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resolution</span><p style={{ fontWeight: 500, marginTop: '0.1rem' }}>{rr.preferredResolution}</p></div>)}
-                        {rr.itemsAffected?.length > 0 && (<div><span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Items</span><p style={{ fontWeight: 500, marginTop: '0.1rem' }}>{rr.itemsAffected.join(', ')}</p></div>)}
-                        {rr.requestedAt && (<div><span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Submitted</span><p style={{ fontWeight: 500, marginTop: '0.1rem' }}>{new Date(rr.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>)}
-                      </div>
-                      {rr.description && (<div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.15)', borderLeft: `3px solid ${cfg.color}` }}><p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{rr.description}</p></div>)}
-                      {rr.adminNote && (<div style={{ marginTop: '0.6rem', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)' }}><p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Admin Note</p><p style={{ fontSize: '0.82rem', color: 'var(--accent-green)' }}>{rr.adminNote}</p></div>)}
-                    </div>
-                  );
-                })()}
-
-                {/* Footer actions */}
-                <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button onClick={() => navigate(`/products/${order.items[0]?.product}`)} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-                      View Product <ChevronRight size={14} />
-                    </button>
-                    {/* Cancel order — only before shipping */}
-                    {['pending','paid','processing'].includes(order.status) && (
-                      <button
-                        onClick={() => setCancelOrder(order)}
-                        disabled={cancelMutation.isPending}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-red)', background: 'rgba(239,68,68,0.06)', color: 'var(--accent-red)', cursor: 'pointer', fontWeight: 500 }}
-                      >
-                        <XCircle size={15} /> Cancel Order
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.2rem' }}>Order # {order._id.slice(-8).toUpperCase()}</p>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <button onClick={() => setExpandedOrderId(expandedOrderId === order._id ? null : order._id)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                        {expandedOrderId === order._id ? 'Hide Details' : 'View order details'}
                       </button>
-                    )}
+                      <span style={{ color: 'var(--border)' }}>|</span>
+                      <button onClick={() => setInvoiceOrder(order)} style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>Invoice</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div style={{ padding: '1.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 300 }}>
+                    {/* Status Text */}
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
+                        {order.status === 'delivered' ? (
+                          <><CheckCircle2 size={20} color="var(--accent-green)" /> Delivered {new Date(order.updatedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</>
+                        ) : order.status === 'cancelled' ? (
+                          <><XCircle size={20} color="var(--accent-red)" /> Cancelled</>
+                        ) : (
+                          <><Truck size={20} color="var(--accent-blue)" /> {order.status.charAt(0).toUpperCase() + order.status.slice(1)}</>
+                        )}
+                      </h3>
+                      {order.deliveryInfo?.estimatedDelivery && order.status !== 'delivered' && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Estimated delivery: {new Date(order.deliveryInfo.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                      )}
+                    </div>
+
+                    {/* Items List (Simplified) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {order.items.map((item, i) => (
+                        <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                          <div style={{ width: 70, height: 70, borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
+                            <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <Link to={`/shop/${item.product}`} style={{ fontWeight: 600, color: 'var(--accent-blue)', textDecoration: 'none', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>
+                              {item.name}
+                            </Link>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.variantLabel} · Qty {item.quantity}</p>
+                            
+                            {order.status === 'delivered' && (
+                              <div style={{ marginTop: '0.5rem' }}>
+                                {reviewedItems.some(r => r.order === order._id && r.product === item.product) ? (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <CheckCircle2 size={12} /> You reviewed this item
+                                  </span>
+                                ) : (
+                                  <button onClick={() => setReviewProduct({ id: item.product, name: item.name, orderId: order._id })} className="btn btn-ghost btn-sm" style={{ padding: '0.25rem 0.5rem', height: 'auto', fontSize: '0.75rem', color: 'var(--accent-amber)' }}>
+                                    <Star size={12} /> Write a product review
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {/* Track Package */}
+                  {/* Quick Actions Sidebar */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 200 }}>
                     {order.status === 'shipped' && order.deliveryInfo?.trackingUrl && (
-                      <a 
-                        href={order.deliveryInfo.trackingUrl} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: 'var(--radius-md)', background: 'var(--text-primary)', color: 'var(--bg-card)', textDecoration: 'none', fontWeight: 600 }}
-                      >
-                        <ExternalLink size={15} /> Track Package
+                      <a href={order.deliveryInfo.trackingUrl} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ justifyContent: 'center', fontSize: '0.85rem' }}>
+                        Track package
                       </a>
                     )}
-                    
-                    {/* Invoice */}
-                    <button onClick={() => setInvoiceOrder(order)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-blue)', background: 'rgba(0,212,255,0.06)', color: 'var(--accent-blue)', cursor: 'pointer', fontWeight: 500 }}>
-                      <FileText size={15} /> Invoice
-                    </button>
-
-                    {/* Return / Replace — always visible */}
-                    {(!order.returnRequest?.reason || order.returnRequest.status === 'rejected') ? (
-                      <button
-                        onClick={() => {
-                          if (order.status !== 'delivered') {
-                            toast('Return/replacement is available after your order is delivered');
-                            return;
-                          }
-                          setReturnOrder(order);
-                        }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                          padding: '0.5rem 1rem', fontSize: '0.85rem',
-                          borderRadius: 'var(--radius-md)',
-                          border: `1px solid ${order.status === 'delivered' ? 'var(--accent-amber)' : 'var(--border)'}`,
-                          background: order.status === 'delivered' ? 'rgba(255,184,0,0.06)' : 'transparent',
-                          color: order.status === 'delivered' ? 'var(--accent-amber)' : 'var(--text-muted)',
-                          cursor: 'pointer', fontWeight: 500,
-                          opacity: order.status === 'delivered' ? 1 : 0.6,
-                        }}
-                      >
-                        <RotateCcw size={15} />
-                        Return / Replace
-                        {order.status !== 'delivered' && (
-                          <span style={{ fontSize: '0.72rem', marginLeft: '0.2rem', opacity: 0.7 }}>(after delivery)</span>
-                        )}
+                    {order.status === 'delivered' && (
+                      <button onClick={() => setReturnOrder(order)} className="btn btn-outline" style={{ justifyContent: 'center', fontSize: '0.85rem' }}>
+                        Return or replace items
                       </button>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.82rem', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', opacity: 0.7 }}>
-                        <RotateCcw size={14} /> Request Open
-                      </span>
                     )}
+                    {['pending', 'paid', 'processing'].includes(order.status) && (
+                      <button onClick={() => setCancelOrder(order)} className="btn btn-outline" style={{ justifyContent: 'center', fontSize: '0.85rem', color: 'var(--accent-red)', borderColor: 'rgba(239,68,68,0.2)' }}>
+                        Cancel order
+                      </button>
+                    )}
+                    <button onClick={() => navigate(`/shop/${order.items[0]?.product}`)} className="btn btn-outline" style={{ justifyContent: 'center', fontSize: '0.85rem' }}>
+                      Buy it again
+                    </button>
                   </div>
                 </div>
+
+                {/* Collapsible Details */}
+                <AnimatePresence>
+                  {expandedOrderId === order._id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      style={{ overflow: 'hidden', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.1)' }}
+                    >
+                      <div style={{ padding: '1.5rem' }}>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>Order Progress</h4>
+                        <div style={{ marginBottom: '2rem' }}>
+                          <OrderTimeline status={order.status} />
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+                          <div>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Shipping Address</h4>
+                            <div style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
+                              <p style={{ fontWeight: 600 }}>{user?.name}</p>
+                              <p>{order.shippingAddress?.address}</p>
+                              <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}</p>
+                              <p>Phone: {order.shippingAddress?.phone}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Payment Method</h4>
+                            <p style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {order.paymentInfo?.method === 'cod' ? <><Truck size={16} /> Cash on Delivery</> : <><CreditCard size={16} /> Online (Razorpay)</>}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Order Summary</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.9rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Items:</span>
+                                <span>₹{(order.totalAmount - (order.shippingPrice || 0)).toLocaleString('en-IN')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Shipping:</span>
+                                <span>{order.shippingPrice > 0 ? `₹${order.shippingPrice}` : 'FREE'}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, borderTop: '1px solid var(--border)', paddingTop: '0.4rem', marginTop: '0.2rem' }}>
+                                <span>Grand Total:</span>
+                                <span style={{ color: 'var(--accent-blue)' }}>₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '3rem' }}>
+          <button className="btn btn-outline" disabled={page <= 1} onClick={() => { setPage(p => p - 1); window.scrollTo(0,0); }}>
+            <ChevronLeft size={16} />
+          </button>
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === pagination.totalPages || Math.abs(p - page) <= 2)
+            .map((p, idx, arr) => (
+              <React.Fragment key={p}>
+                {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setPage(p); window.scrollTo(0,0); }} style={{ minWidth: 40 }}>
+                  {p}
+                </button>
+              </React.Fragment>
+            ))}
+          <button className="btn btn-outline" disabled={page >= pagination.totalPages} onClick={() => { setPage(p => p + 1); window.scrollTo(0,0); }}>
+            <ChevronRight size={16} />
+          </button>
         </div>
       )}
 

@@ -215,7 +215,7 @@ const ProductDetailPage = () => {
       <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
         <Zap size={48} color="var(--accent-red)" style={{ opacity: 0.5 }} />
         <h2>Product not found</h2>
-        <button onClick={() => navigate('/products')} className="btn btn-primary">Back to Products</button>
+        <button onClick={() => navigate('/shop')} className="btn btn-primary">Back to Shop</button>
       </div>
     );
   }
@@ -257,12 +257,32 @@ const ProductDetailPage = () => {
       </Helmet>
       
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
         <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Home</span>
         <ChevronRight size={14} />
-        <span onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>Products</span>
+        <span onClick={() => navigate('/shop')} style={{ cursor: 'pointer' }}>Shop</span>
+        
+        {product.category && (
+          <>
+            <ChevronRight size={14} />
+            <span 
+              onClick={() => navigate(`/shop?category=${product.category.slug || product.category}`)} 
+              style={{ cursor: 'pointer' }}
+            >
+              {product.category.name || 'Category'}
+            </span>
+          </>
+        )}
+
+        {product.subCategory && (
+          <>
+            <ChevronRight size={14} />
+            <span style={{ color: 'var(--text-muted)' }}>{product.subCategory}</span>
+          </>
+        )}
+
         <ChevronRight size={14} />
-        <span style={{ color: 'var(--text-primary)' }}>{product.name}</span>
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{product.name}</span>
       </div>
 
       {/* Top Section: Gallery + Details */}
@@ -577,7 +597,7 @@ const ProductDetailPage = () => {
             {recentItems.filter(r => r._id !== product._id).slice(0, 6).map(item => (
               <div
                 key={item._id}
-                onClick={() => navigate(`/products/${item.slug}`)}
+                onClick={() => navigate(`/shop/${item.slug}`)}
                 style={{
                   minWidth: 180, maxWidth: 200, cursor: 'pointer',
                   background: 'var(--bg-card)', border: '1px solid var(--border)',

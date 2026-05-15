@@ -18,8 +18,8 @@ const ReviewSchema = new mongoose.Schema({
     min: 1,
     max: 5,
   },
-  title:   { type: String, maxlength: 100 },
-  comment: { type: String, maxlength: 2000 },
+  title:   { type: String, required: [true, 'Title is required'], maxlength: 100 },
+  comment: { type: String, required: [true, 'Review comment is required'], maxlength: 2000 },
   verified: { type: Boolean, default: false }, // true if user ordered this product
   order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
   adminRemarks: { type: String, maxlength: 1000 },

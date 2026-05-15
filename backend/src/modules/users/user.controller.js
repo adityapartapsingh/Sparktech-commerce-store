@@ -56,7 +56,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { $set: updates },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
 
   if (!user) throw new AppError('User not found', 404);
@@ -121,7 +121,7 @@ exports.deleteAddress = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { $pull: { addresses: { _id: req.params.addressId } } },
-    { new: true }
+    { returnDocument: 'after' }
   ).select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
 
   if (!user) throw new AppError('User not found', 404);

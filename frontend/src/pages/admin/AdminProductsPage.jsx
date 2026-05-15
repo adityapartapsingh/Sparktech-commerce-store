@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, X, UploadCloud, Search, ImageIcon, Layers, Settings2, Download, ChevronDown, Package, IndianRupee, AlertTriangle, FileUp, List } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, UploadCloud, Search, ImageIcon, Layers, Settings2, Download, ChevronDown, Package, IndianRupee, AlertTriangle, FileUp, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import RichTextEditor from '../../components/RichTextEditor';
 import toast from 'react-hot-toast';
 import api from '../../lib/axios';
 import { exportData } from '../../lib/exportData';
+import { useAuthStore } from '../../store/authStore';
 
 // Common specification keys for electronic components — used for quick-add in the Specifications tab
 const COMMON_SPECS = [
@@ -37,12 +38,14 @@ const COMMON_SPECS = [
 ];
 
 const AdminProductsPage = () => {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
   
   // Tab State
   const [activeTab, setActiveTab] = useState('general');
@@ -74,17 +77,22 @@ const AdminProductsPage = () => {
     queryFn: async () => {
       const res = await api.get('/categories');
       return res.data;
-    }
+    },
+    enabled: !!user
   });
   const categories = catData?.data || [];
+  const mainCategories = categories.filter(c => !c.parent);
+  const subCategories = categories.filter(c => c.parent?._id === catId || c.parent === catId);
 
   // Fetch Products
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['admin-products', searchTerm],
+    queryKey: ['admin-products', searchTerm, page],
     queryFn: async () => {
-      const res = await api.get('/products', { params: { search: searchTerm, limit: 100 } });
+      const res = await api.get('/products', { params: { search: searchTerm, page, limit: 10, status: 'all' } });
       return res.data;
-    }
+    },
+    enabled: !!user,
+    keepPreviousData: true
   });
 
   const rawData = pageData?.data;
@@ -150,13 +158,14 @@ const AdminProductsPage = () => {
          basePrice: product.basePrice,
          sku: product.sku,
          description: product.description,
-         isActive: product.isActive
+         isActive: product.isActive,
+         isFeatured: product.isFeatured
        });
        setVariants(product.variants || []);
        setAttributes(product.attributes || []);
        setExistingImages(product.images || []);
     } else {
-       reset({ name: '', brand: '', category: categories[0]?._id || '', subCategory: '', tags: '', shortWarranty: '', warranty: '', basePrice: '', sku: `SKU-${Math.floor(Math.random()*10000)}`, description: '', isActive: true });
+       reset({ name: '', brand: '', category: categories[0]?._id || '', subCategory: '', tags: '', shortWarranty: '', warranty: '', basePrice: '', sku: `SKU-${Math.floor(Math.random()*10000)}`, description: '', isActive: true, isFeatured: false });
        setVariants([{ sku: '', label: 'Default', price: 0, stock: 10 }]);
        setAttributes([]);
        setExistingImages([]);
@@ -369,7 +378,10 @@ const AdminProductsPage = () => {
                       {product.images?.[0] ? <img src={product.images[0]} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <UploadCloud size={20} color="var(--text-muted)" style={{ margin: 14 }} />}
                     </div>
                     <div>
-                      <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</p>
+                        {product.isFeatured && <span className="badge badge-amber" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>Featured</span>}
+                      </div>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{product.brand}</p>
                     </div>
                   </td>
@@ -394,6 +406,28 @@ const AdminProductsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pageData?.data?.pagination && pageData.data.pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '0.5rem' }}>
+              <ChevronLeft size={18} />
+            </button>
+            {Array.from({ length: pageData.data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === pageData.data.pagination.totalPages || Math.abs(p - page) <= 2)
+              .map((p, idx, arr) => (
+                <React.Fragment key={p}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span style={{ color: 'var(--text-muted)' }}>…</span>}
+                  <button className={`btn ${p === page ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(p)} style={{ minWidth: 40, height: 40, padding: 0 }}>
+                    {p}
+                  </button>
+                </React.Fragment>
+              ))}
+            <button className="btn btn-outline" disabled={page >= pageData.data.pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '0.5rem' }}>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Advanced Tabbed CRUD Modal */}
@@ -472,7 +506,7 @@ const AdminProductsPage = () => {
                         ) : (
                           <select className="input" {...register('category', { required: true })} style={{ appearance: 'none' }}>
                              <option value="">Select Category</option>
-                             {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                             {mainCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                           </select>
                         )}
                       </div>
@@ -504,7 +538,10 @@ const AdminProductsPage = () => {
                       </div>
                       <div>
                         <label className="label">Sub Category</label>
-                        <input type="text" className="input" placeholder="e.g. Microcontrollers" {...register('subCategory')} />
+                        <select className="input" {...register('subCategory')} style={{ appearance: 'none' }}>
+                           <option value="">Select Sub Category</option>
+                           {subCategories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+                        </select>
                       </div>
                     </div>
 
@@ -532,9 +569,15 @@ const AdminProductsPage = () => {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                      <input type="checkbox" id="isActive" {...register('isActive')} style={{ width: 18, height: 18, accentColor: 'var(--accent-green)' }} />
-                      <label htmlFor="isActive" style={{ fontWeight: 500, color: 'var(--accent-green)' }}>Product is globally active and visible on store</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        <input type="checkbox" id="isActive" {...register('isActive')} style={{ width: 18, height: 18, accentColor: 'var(--accent-green)' }} />
+                        <label htmlFor="isActive" style={{ fontWeight: 500, color: 'var(--accent-green)', fontSize: '0.85rem' }}>Globally Active & Visible</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        <input type="checkbox" id="isFeatured" {...register('isFeatured')} style={{ width: 18, height: 18, accentColor: 'var(--accent-amber)' }} />
+                        <label htmlFor="isFeatured" style={{ fontWeight: 500, color: 'var(--accent-amber)', fontSize: '0.85rem' }}>Feature on Homepage</label>
+                      </div>
                     </div>
                   </div>
 

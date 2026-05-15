@@ -5,7 +5,14 @@ const AppError = require('../../utils/AppError');
 const CACHE_TTL = 300; // 5 minutes
 
 const buildFilter = (query) => {
-  const filter = { isActive: true };
+  const filter = {};
+  if (query.status === 'all') {
+    // Don't filter by isActive
+  } else if (query.status === 'inactive') {
+    filter.isActive = false;
+  } else {
+    filter.isActive = true;
+  }
   if (query.category) filter.category = query.category;
   if (query.brand) filter.brand = new RegExp(query.brand, 'i');
   if (query.minPrice || query.maxPrice) {
@@ -13,7 +20,15 @@ const buildFilter = (query) => {
     if (query.minPrice) filter.basePrice.$gte = Number(query.minPrice);
     if (query.maxPrice) filter.basePrice.$lte = Number(query.maxPrice);
   }
-  if (query.search) filter.$text = { $search: query.search };
+  if (query.search) {
+    const searchRegex = new RegExp(query.search, 'i');
+    filter.$or = [
+      { name: searchRegex },
+      { sku: searchRegex },
+      { 'variants.sku': searchRegex },
+      { tags: { $in: [searchRegex] } }
+    ];
+  }
   if (query.featured === 'true') filter.isFeatured = true;
   // Attribute filters: ?attr[Voltage]=12V
   if (query.attr) {

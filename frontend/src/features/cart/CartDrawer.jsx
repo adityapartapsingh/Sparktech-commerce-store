@@ -89,7 +89,7 @@ const CartDrawer = () => {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '3rem 0' }}>
                   <Zap size={48} color="var(--accent-blue)" style={{ opacity: 0.2 }} />
                   <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Your cart is empty</p>
-                  <Link to="/products" onClick={closeCart} className="btn btn-primary">Browse Products</Link>
+                  <Link to="/shop" onClick={closeCart} className="btn btn-primary">Browse Shop</Link>
                 </div>
               ) : (
                 items.map((item) => (

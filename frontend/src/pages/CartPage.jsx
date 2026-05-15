@@ -47,7 +47,7 @@ const CartPage = () => {
           type="empty"
           title="Your cart is empty"
           message="Looks like you haven't added any components yet. Browse our catalog to find what you need for your project."
-          action={{ label: 'Browse Products', to: '/products' }}
+          action={{ label: 'Browse Shop', to: '/shop' }}
         />
       </div>
     );
@@ -109,7 +109,7 @@ const CartPage = () => {
 
                 {/* Details */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link to={`/products`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Link to={`/shop`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.name}
                     </p>
@@ -208,7 +208,7 @@ const CartPage = () => {
             Proceed to Checkout <ChevronRight size={18} />
           </Link>
 
-          <Link to="/products" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.85rem', marginTop: '1rem' }}>
+          <Link to="/shop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.85rem', marginTop: '1rem' }}>
             <ArrowLeft size={14} /> Continue Shopping
           </Link>
         </div>
