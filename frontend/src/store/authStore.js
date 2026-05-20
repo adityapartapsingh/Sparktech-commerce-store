@@ -6,12 +6,20 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      accessToken: null,
+      refreshToken: null,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      setTokens: ({ accessToken, refreshToken }) => set({ accessToken, refreshToken }),
+      logout: () => set({ user: null, isAuthenticated: false, accessToken: null, refreshToken: null }),
     }),
     {
       name: 'SparkTech-auth',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
     }
   )
 );

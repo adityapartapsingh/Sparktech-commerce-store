@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 const normalizeApiUrl = (url) => {
   if (!url) return url;
@@ -17,8 +18,17 @@ export const apiBase = isVercelProd
 
 const api = axios.create({
   baseURL: apiBase,
-  withCredentials: true,  // Send HTTP-only cookies
+  withCredentials: true,  // Still send cookies as fallback
   headers: { 'Content-Type': 'application/json' },
+});
+
+// ─── Request Interceptor: Attach Bearer Token ──────────────────────────────
+api.interceptors.request.use((config) => {
+  const { accessToken } = useAuthStore.getState();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  return config;
 });
 
 // Flag to prevent multiple simultaneous refresh calls
@@ -65,11 +75,16 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await api.post('/auth/refresh');
+        // Send refresh token in body (works even when cookies are blocked)
+        const { refreshToken } = useAuthStore.getState();
+        const res = await api.post('/auth/refresh', { refreshToken });
+        const { accessToken: newAccess, refreshToken: newRefresh } = res.data.data;
+        useAuthStore.getState().setTokens({ accessToken: newAccess, refreshToken: newRefresh });
         processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
+        useAuthStore.getState().logout();
         window.dispatchEvent(new CustomEvent('auth:logout'));
         return Promise.reject(refreshError);
       } finally {

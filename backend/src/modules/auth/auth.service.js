@@ -110,7 +110,7 @@ exports.verifyOtp = async ({ userId, emailOtp, phoneOtp }, res, req) => {
   res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
   res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-  return { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role };
+  return { _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, accessToken, refreshToken };
 };
 
 exports.login = async ({ identifier, password }, res, req) => {
@@ -130,7 +130,7 @@ exports.login = async ({ identifier, password }, res, req) => {
   res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
   res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-  return { _id: user._id, name: user.name, email: user.email, role: user.role };
+  return { _id: user._id, name: user.name, email: user.email, role: user.role, accessToken, refreshToken };
 };
 
 exports.oauthLogin = async (user, res, req) => {
@@ -143,7 +143,7 @@ exports.oauthLogin = async (user, res, req) => {
 };
 
 exports.refresh = async (req, res) => {
-  const token = req.cookies?.refreshToken;
+  const token = req.cookies?.refreshToken || req.body?.refreshToken;
   if (!token) throw new AppError('No refresh token', 401);
 
   let decoded;
@@ -165,7 +165,7 @@ exports.refresh = async (req, res) => {
   res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
   res.cookie('refreshToken', newRefresh, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-  return { message: 'Tokens refreshed' };
+  return { message: 'Tokens refreshed', accessToken, refreshToken: newRefresh };
 };
 
 exports.logout = async (userId, res, req) => {

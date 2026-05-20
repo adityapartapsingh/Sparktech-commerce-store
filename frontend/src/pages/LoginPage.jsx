@@ -17,7 +17,7 @@ const schema = z.object({
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
   const [showPass, setShowPass] = useState(false);
 
   const registerForm = useForm({ resolver: zodResolver(schema) });
@@ -26,11 +26,13 @@ const LoginPage = () => {
   const mutation = useMutation({
     mutationFn: (data) => api.post('/auth/login', { identifier: data.identifier, password: data.password }),
     onSuccess: async (res) => {
-      setUser(res.data.data);
+      const { accessToken, refreshToken, ...userData } = res.data.data;
+      setUser(userData);
+      if (accessToken && refreshToken) setTokens({ accessToken, refreshToken });
       // Fetch updated cart after login (merges guest cart)
       await useCartStore.getState().fetchCart();
-      toast.success(`Welcome back, ${res.data.data.name}!`);
-      const role = res.data.data.role;
+      toast.success(`Welcome back, ${userData.name}!`);
+      const role = userData.role;
       navigate((role === 'admin' || role === 'masteradmin') ? '/admin/dashboard' : '/');
     },
     onError: (err) => {

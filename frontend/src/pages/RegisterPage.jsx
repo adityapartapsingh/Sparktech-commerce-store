@@ -26,7 +26,7 @@ const otpSchema = z.object({
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+  const { setUser, setTokens } = useAuthStore();
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [step, setStep] = useState('register');
@@ -67,7 +67,9 @@ const RegisterPage = () => {
       phoneOtp: data.phoneOtp || undefined,
     }),
     onSuccess: (res) => {
-      setUser(res.data.data);
+      const { accessToken, refreshToken, ...userData } = res.data.data;
+      setUser(userData);
+      if (accessToken && refreshToken) setTokens({ accessToken, refreshToken });
       toast.success('Account verified! Welcome to SparkTech');
       navigate('/');
     },
