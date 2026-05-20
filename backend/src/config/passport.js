@@ -15,7 +15,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID || 'mock_google_id',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'mock_google_secret',
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/v1/auth/google/callback`,
+      callbackURL: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://sparktech-commerce-store.onrender.com' : 'http://localhost:5000')}/api/v1/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -65,7 +65,7 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID || 'mock_github_id',
       clientSecret: process.env.GITHUB_CLIENT_SECRET || 'mock_github_secret',
-      callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/v1/auth/github/callback`,
+      callbackURL: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://sparktech-commerce-store.onrender.com' : 'http://localhost:5000')}/api/v1/auth/github/callback`,
       scope: ['user:email']
     },
     async (accessToken, refreshToken, profile, done) => {

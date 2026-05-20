@@ -140,6 +140,8 @@ exports.oauthLogin = async (user, res, req) => {
   const options = getCookieOptions(req);
   res.cookie('accessToken', accessToken, { ...options, maxAge: 15 * 60 * 1000 });
   res.cookie('refreshToken', refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+  return { accessToken, refreshToken };
 };
 
 exports.refresh = async (req, res) => {

@@ -13,12 +13,43 @@ router.post('/login', authLimiter, loginSlowDown, validate(LoginSchema), AuthCon
 
 const frontendLoginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_failed`;
 
-// Federations
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: frontendLoginUrl }), AuthController.oauthCallback);
+const getCallbackURL = (req, provider) => {
+  if (process.env.BACKEND_URL) {
+    return `${process.env.BACKEND_URL.replace(/\/+$/, '')}/api/v1/auth/${provider}/callback`;
+  }
+  const host = req.get('host');
+  const proto = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  return `${proto}://${host}/api/v1/auth/${provider}/callback`;
+};
 
-router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
-router.get('/github/callback', passport.authenticate('github', { session: false, failureRedirect: frontendLoginUrl }), AuthController.oauthCallback);
+// Federations
+router.get('/google', (req, res, next) => {
+  const callbackURL = getCallbackURL(req, 'google');
+  passport.authenticate('google', { scope: ['profile', 'email'], callbackURL })(req, res, next);
+});
+
+router.get('/google/callback', (req, res, next) => {
+  const callbackURL = getCallbackURL(req, 'google');
+  passport.authenticate('google', { 
+    session: false, 
+    failureRedirect: frontendLoginUrl,
+    callbackURL
+  })(req, res, next);
+}, AuthController.oauthCallback);
+
+router.get('/github', (req, res, next) => {
+  const callbackURL = getCallbackURL(req, 'github');
+  passport.authenticate('github', { scope: ['user:email'], callbackURL })(req, res, next);
+});
+
+router.get('/github/callback', (req, res, next) => {
+  const callbackURL = getCallbackURL(req, 'github');
+  passport.authenticate('github', { 
+    session: false, 
+    failureRedirect: frontendLoginUrl,
+    callbackURL
+  })(req, res, next);
+}, AuthController.oauthCallback);
 
 router.post('/logout', protect, AuthController.logout);
 router.post('/refresh', AuthController.refresh);

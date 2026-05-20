@@ -103,12 +103,34 @@ const AppLayout = ({ children, noLayout }) => (
 function AppRoutes() {
   const location = useLocation();
   const { initTheme } = useThemeStore();
+  const { setUser, setTokens, logout } = useAuthStore();
+
+  // Handle URL query parameters for OAuth login flow (Bearer Token fallback for cross-domain OAuth redirects)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const refreshToken = params.get('refreshToken');
+    const id = params.get('id');
+    const name = params.get('name');
+    const email = params.get('email');
+    const role = params.get('role');
+
+    if (token && refreshToken && id && name && email && role) {
+      setTokens({ accessToken: token, refreshToken });
+      setUser({ _id: id, name: decodeURIComponent(name), email: decodeURIComponent(email), role });
+      
+      // Clean URL search parameters
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+      
+      toast.success(`Welcome, ${decodeURIComponent(name)}!`);
+    }
+  }, [location, setUser, setTokens]);
 
   // Initialize theme on mount
   useEffect(() => { initTheme(); }, [initTheme]);
 
   // Listen for auth:logout event from Axios interceptor
-  const { logout } = useAuthStore();
   useEffect(() => {
     const handleLogout = () => logout();
     window.addEventListener('auth:logout', handleLogout);

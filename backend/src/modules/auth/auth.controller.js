@@ -21,10 +21,20 @@ exports.login = asyncHandler(async (req, res) => {
 
 exports.oauthCallback = asyncHandler(async (req, res) => {
   if (!req.user) throw new AppError('OAuth authentication failed', 401);
-  await AuthService.oauthLogin(req.user, res, req);
+  const { accessToken, refreshToken } = await AuthService.oauthLogin(req.user, res, req);
+  
   // Redirect to frontend — use FRONTEND_URL (CRA runs on 3000, Vite on 5173)
   const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
-  res.redirect(frontendUrl);
+  
+  const redirectUrl = new URL(frontendUrl);
+  redirectUrl.searchParams.set('token', accessToken);
+  redirectUrl.searchParams.set('refreshToken', refreshToken);
+  redirectUrl.searchParams.set('id', req.user._id.toString());
+  redirectUrl.searchParams.set('name', req.user.name);
+  redirectUrl.searchParams.set('email', req.user.email);
+  redirectUrl.searchParams.set('role', req.user.role);
+
+  res.redirect(redirectUrl.toString());
 });
 
 exports.logout = asyncHandler(async (req, res) => {
