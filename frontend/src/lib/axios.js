@@ -7,7 +7,13 @@ const normalizeApiUrl = (url) => {
   return cleaned.endsWith('/api/v1') ? cleaned : `${cleaned}/api/v1`;
 };
 
-export const apiBase = normalizeApiUrl(process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1');
+// In production (Vercel), use relative URL so requests go through the Vercel proxy.
+// This makes cookies first-party and fixes mobile browser third-party cookie blocking.
+// In local dev, use the direct backend URL from .env.
+const isVercelProd = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+export const apiBase = isVercelProd
+  ? '/api/v1'
+  : normalizeApiUrl(process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1');
 
 const api = axios.create({
   baseURL: apiBase,

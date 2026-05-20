@@ -17,15 +17,16 @@ const generateTokens = (userId) => {
 };
 
 const getCookieOptions = (req) => {
-  const host = req ? req.get('host') : '';
-  // Force secure/none if on Render/Vercel or if the request is HTTPS
-  const isCloud = !!process.env.RENDER || !!process.env.VERCEL || (host && (host.includes('onrender.com') || host.includes('vercel.app')));
-  const isSecure = isCloud || (req && (req.secure || req.get('x-forwarded-proto') === 'https'));
+  const isHttps = req && (req.secure || req.get('x-forwarded-proto') === 'https');
 
   return {
     httpOnly: true,
-    secure: isSecure,
-    sameSite: isSecure ? 'none' : 'lax',
+    secure: isHttps,
+    // Always use 'none' when on HTTPS to support both:
+    // 1. Cross-site requests (localhost → onrender.com)
+    // 2. Proxy requests (vercel.app → onrender.com) where the cookie
+    //    is set on the Vercel domain anyway (first-party to the browser)
+    sameSite: isHttps ? 'none' : 'lax',
     path: '/',
   };
 };
