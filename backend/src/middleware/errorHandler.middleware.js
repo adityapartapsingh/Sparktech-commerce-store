@@ -1,6 +1,10 @@
 const logger = require('../utils/logger');
 const AppError = require('../utils/AppError');
 
+// FIXME: the spread on line 41 (let error = { ...err, message: err.message }) loses the prototype chain.
+// This means we can't use `instanceof AppError` checks downstream.
+// Works fine for now since we only check .name and .code, but could bite us later.
+
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}`;
   return new AppError(message, 400);
@@ -39,6 +43,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Handle specific Mongoose/JWT errors
   let error = { ...err, message: err.message };
+  
   
   if (err.message && err.message.includes('next is not a function')) {
     require('fs').writeFileSync('d:\\project\\Sparktech-commerce-store-main\\backend\\logs\\next_error_dump.txt', String(err.stack || err));

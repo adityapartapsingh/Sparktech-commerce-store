@@ -39,6 +39,10 @@ const CartPage = () => {
   const deliveryFee = cartTotal() >= 500 ? 0 : 50;
   const total = cartTotal() + deliveryFee;
 
+  // FIXME: the table layout breaks completely on iPhone SE screens.
+  // I should probably switch to a card-based layout for mobile screens
+  // instead of trying to cram a table into 320px.
+
   if (items.length === 0) {
     return (
       <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '6rem' }}>

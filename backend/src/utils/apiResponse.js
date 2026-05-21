@@ -1,7 +1,4 @@
-/**
- * Standardized API response shape.
- * Always send { success, message, data } from controllers.
- */
+
 const sendSuccess = (res, data = {}, message = 'Success', statusCode = 200) => {
   res.status(statusCode).json({ success: true, message, data });
 };

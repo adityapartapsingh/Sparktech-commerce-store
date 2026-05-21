@@ -69,6 +69,9 @@ Before you begin, ensure you have the following installed:
    cd backend
    npm install
    ```
+> Note: If `npm install` fails on Windows, it's usually the `node-gyp` dependency for bcrypt. 
+> Make sure you have the visual studio build tools installed! (Spent 3 hours debugging this myself).
+
    Create a `.env` file in the `backend` directory based on the configuration list below, then start the development server:
    ```bash
    npm run dev
@@ -195,3 +198,12 @@ The application uses a highly robust authentication flow designed to work across
 2. **HTTP-only Cookies (Fallback)**: The backend also sets cookies as a fallback mechanism.
 3. **Cross-Domain OAuth**: During Google/GitHub authentication, the backend redirects the user back to the frontend with the generated tokens appended as URL query parameters. The frontend intercepts these, stores them in state, and clears the URL bar for a seamless user experience.
 4. **Silent Refresh**: An Axios response interceptor catches `401 Unauthorized` errors and automatically attempts a silent token refresh using the stored refresh token before retrying the failed request.
+
+---
+
+## Known Issues & Roadmap
+- [x] Basic Auth and JWT
+- [x] Product browsing and cart
+- [ ] Implement Redis caching for product lists (DB is getting hammered)
+- [ ] Fix the mobile layout on the cart page (table squishes too much)
+- [ ] Add unit tests... eventually 😅

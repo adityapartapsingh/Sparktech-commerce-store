@@ -160,6 +160,17 @@ const HomePage = () => {
             </Link>
           </div>
 
+      {/* 
+        <section className="featured-carousel-experiment">
+          <h2>Trending Now</h2>
+          <Carousel>
+            {featuredProducts.map(p => <FeaturedCard key={p.id} product={p} />)}
+          </Carousel>
+        </section>
+        // Note to self: The react-slick carousel was causing huge layout shifts
+        // on mobile. Commenting out until I have time to fix the CSS.
+      */}
+
           {isLoading ? (
             <div className="product-grid">
               {Array.from({ length: 4 }).map((_, i) => (

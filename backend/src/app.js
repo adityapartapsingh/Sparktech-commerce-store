@@ -11,6 +11,11 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const { getRedis } = require('./config/redis');
 
+// const morgan = require('morgan');
+// Tried morgan for HTTP logging but it cluttered the console alongside Winston.
+// Winston already captures everything we need. Keeping this here in case
+// we ever want per-request timing in dev mode.
+
 require('./config/passport'); // Initialize strategies
 
 const app = express();
@@ -26,6 +31,8 @@ app.use(helmet({
 // ==========================
 //  CORS
 // ==========================
+// FIXME: this list is getting unwieldy — should come from a comma-separated env var
+// like ALLOWED_ORIGINS="url1,url2" instead of hardcoding new URLs every deploy
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
@@ -50,7 +57,8 @@ app.use(cors({
 // ==========================
 //  Body Parsers
 // ==========================
-// Razorpay webhook needs raw body for HMAC signature verification — mount BEFORE express.json()
+// HACK: Razorpay webhook needs raw body for HMAC signature verification — mount BEFORE express.json()
+// This ordering is critical. Moving it below express.json() will silently break payment verification.
 app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -91,12 +99,11 @@ if (redisClient) {
   }));
 }
 
-// ==========================
+
 //  Sanitization
-// ==========================
-// express-mongo-sanitize is incompatible with Express 5 (req.query is read-only).
-// Custom lightweight sanitizer for req.body + req.params only.
-// All user input is also validated via Zod schemas on each route.
+
+
+// TODO: move this sanitizer to its own middleware file (middleware/sanitize.middleware.js)
 const sanitize = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
   for (const key of Object.keys(obj)) {
@@ -111,14 +118,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// ==========================
+
 //  Rate Limiting
-// ==========================
 app.use('/api', apiLimiter);
 
-// ==========================
+
 //  Health Check
-// ==========================
 app.get('/health', (req, res) => {
   const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   const redis = getRedis();
@@ -132,9 +137,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ==========================
+
 //  API Routes
-// ==========================
 app.use('/api/v1/auth',       require('./modules/auth/auth.routes'));
 app.use('/api/v1/users',      require('./modules/users/user.routes'));
 app.use('/api/v1/products',   require('./modules/products/product.routes'));
@@ -148,16 +152,14 @@ app.use('/api/v1/wishlist',   require('./modules/wishlist/wishlist.routes'));
 app.use('/api/v1/notifications', require('./modules/notifications/notifications.routes'));
 app.use('/api/v1/admin',      require('./modules/admin/admin.routes'));
 
-// ==========================
+
 //  404 Handler
-// ==========================
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
 
-// ==========================
+
 //  Global Error Handler
-// ==========================
 app.use(errorHandler);
 
 module.exports = app;

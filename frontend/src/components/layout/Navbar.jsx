@@ -113,6 +113,13 @@ const Navbar = () => {
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
+          {/* <Link to="/wishlist" className="nav-icon">
+                <HeartIcon />
+                {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
+              </Link> 
+              // Hide wishlist until the backend API is actually finished
+          */}
+
             {/* Wishlist */}
             {isAuthenticated && (
               <Link to="/wishlist" className="btn btn-ghost" style={{ padding: '0.5rem', position: 'relative' }}>

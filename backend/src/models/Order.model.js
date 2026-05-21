@@ -39,6 +39,8 @@ const OrderSchema = new mongoose.Schema({
     status:  { type: String, enum: ['unpaid', 'paid', 'failed'],           default: 'unpaid'    },
   },
   trackingNumber:      String,
+  // TODO: add coupon/discount fields here — currently no promo code support
+  // Fields needed: couponCode, discountAmount, discountType ('flat' | 'percent')
   notes:               String,
   cancellationReason:  String,   // why customer cancelled
   cancelledAt:         Date,
@@ -49,6 +51,10 @@ const OrderSchema = new mongoose.Schema({
     provider:          String,
     trackingUrl:       String,
   },
+  /* FIXME: returnRequest is getting bloated — at scale this should probably
+     be its own collection (ReturnRequest) with a ref back to the Order.
+     Embedding it here means we can't easily query/paginate returns independently.
+     Good enough for now with <1000 orders but will need a migration eventually. */
   returnRequest: {
     type:               { type: String, enum: ['return', 'replacement'] },
     reason:             String,   // primary reason category

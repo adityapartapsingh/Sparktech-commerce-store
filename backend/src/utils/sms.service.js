@@ -1,21 +1,5 @@
 const logger = require('./logger');
 
-// ─── MSG91 Configuration ────────────────────────────────────────────────────
-// Set these in your .env file:
-//   MSG91_AUTH_KEY       — Your MSG91 auth key from dashboard
-//   MSG91_SENDER_ID      — 6-character sender ID (e.g., "ROBMRT")
-//   MSG91_ROUTE          — SMS route (4 = transactional, 1 = promotional)
-//   MSG91_COUNTRY_CODE   — Default country code (91 for India)
-//
-// For Flow (template-based) SMS, also set:
-//   MSG91_FLOW_ORDER_CONFIRM  — Flow/template ID for order confirmation
-//   MSG91_FLOW_SHIPPED        — Flow/template ID for shipment notification
-//   MSG91_FLOW_DELIVERED      — Flow/template ID for delivery confirmation
-//   MSG91_FLOW_CANCELLED      — Flow/template ID for cancellation
-//
-// If MSG91_AUTH_KEY is not set, SMS will be logged to console (dev mode).
-// ─────────────────────────────────────────────────────────────────────────────
-
 const MSG91_API_URL = 'https://control.msg91.com/api/v5/flow';
 
 /**
@@ -80,11 +64,9 @@ const sendFlowSMS = async (phone, flowId, variables = {}) => {
   }
 };
 
-// ─── Convenience Methods ────────────────────────────────────────────────────
 
-/**
- * Send order confirmation SMS
- */
+
+// Send order confirmation SMS
 const sendOrderConfirmationSMS = async (phone, orderId, totalAmount) => {
   if (!phone) return;
   const flowId = process.env.MSG91_FLOW_ORDER_CONFIRM;
@@ -94,9 +76,8 @@ const sendOrderConfirmationSMS = async (phone, orderId, totalAmount) => {
   });
 };
 
-/**
- * Send shipped SMS with tracking info
- */
+
+// Send shipped SMS with tracking info 
 const sendShippedSMS = async (phone, orderId, trackingNumber, provider) => {
   if (!phone) return;
   const flowId = process.env.MSG91_FLOW_SHIPPED;
@@ -107,9 +88,8 @@ const sendShippedSMS = async (phone, orderId, trackingNumber, provider) => {
   });
 };
 
-/**
- * Send delivered SMS
- */
+
+// Send delivered SMS
 const sendDeliveredSMS = async (phone, orderId) => {
   if (!phone) return;
   const flowId = process.env.MSG91_FLOW_DELIVERED;
@@ -118,9 +98,7 @@ const sendDeliveredSMS = async (phone, orderId) => {
   });
 };
 
-/**
- * Send cancellation SMS
- */
+// Send cancellation SMS
 const sendCancellationSMS = async (phone, orderId) => {
   if (!phone) return;
   const flowId = process.env.MSG91_FLOW_CANCELLED;

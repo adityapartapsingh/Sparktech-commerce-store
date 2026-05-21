@@ -3,14 +3,14 @@ const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
 const User = require('../models/User.model');
 
-// Extract access token from Authorization header OR cookies
+
 const extractToken = (req) => {
-  // 1. Check Authorization header first (Bearer token)
+ 
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.split(' ')[1];
   }
-  // 2. Fallback to cookie
+  
   return req.cookies?.accessToken;
 };
 
@@ -31,6 +31,9 @@ exports.protect = asyncHandler(async (req, res, next) => {
   req.user = currentUser;
   next();
 });
+
+// TODO: add per-user rate limiting here — right now a single compromised token
+// could hammer the API. Should track req count per user._id in Redis.
 
 // Optional auth - doesn't fail if no token, just sets req.user if available
 exports.optionalProtect = asyncHandler(async (req, res, next) => {

@@ -180,6 +180,9 @@ const ProductDetailPage = () => {
   const { isInWishlist, toggleWishlist, isToggling } = useWishlist();
 
   const [activeImage, setActiveImage] = useState(0);
+  // TODO: this component re-renders 4 times when changing variants.
+  // Need to wrap the variant selector in React.memo() or rethink the state.
+  // It's fine for now, but will lag on older Android phones.
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('description');

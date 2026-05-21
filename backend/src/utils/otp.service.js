@@ -1,18 +1,13 @@
 const crypto = require('crypto');
 const logger = require('./logger');
 
-/**
- * Generate a cryptographically secure 6-digit OTP
- */
+
+// Generate a cryptographically secure 6-digit OTP
 exports.generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-/**
- * Send an OTP natively via Email
- * Currently mocked for development to prevent blocking infrastructure.
- * In a real production environment, integrate Nodemailer / SendGrid here.
- */
+
 exports.sendEmailOTP = async (email, otp) => {
   try {
     // TODO: Plug Nodemailer Transport here securely
@@ -26,11 +21,7 @@ exports.sendEmailOTP = async (email, otp) => {
   }
 };
 
-/**
- * Send an OTP natively via SMS
- * Currently mocked for development (no Twilio keys explicitly provided).
- * In a real production environment, use twilio client.messages.create()
- */
+
 exports.sendPhoneOTP = async (phone, otp) => {
   try {
     // TODO: Plug Twilio Client here securely
