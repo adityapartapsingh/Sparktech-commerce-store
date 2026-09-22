@@ -164,12 +164,46 @@ h4 { font-size: 1rem; }
 .page-wrapper { min-height: 100vh; }
 
 /* Responsive Display Utilities */
-.desktop-only { display: flex; }
-.mobile-only { display: none; }
+.desktop-only { display: flex !important; }
+span.desktop-only { display: inline !important; }
+.mobile-only { display: none !important; }
 
-@media (max-width: 992px) {
+/* Header Specific Responsive Controls */
+.nav-links-desktop {
+  display: flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.nav-search-desktop {
+  display: flex !important;
+  flex: 1 1 240px;
+  max-width: 440px;
+}
+.nav-hamburger-btn {
+  display: none !important;
+}
+.nav-search-mobile-btn {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {
   .desktop-only { display: none !important; }
   .mobile-only { display: flex !important; }
+  span.mobile-only { display: inline !important; }
+
+  .nav-links-desktop {
+    display: none !important;
+  }
+  .nav-search-desktop {
+    display: none !important;
+  }
+  .nav-hamburger-btn {
+    display: flex !important;
+  }
+  .nav-search-mobile-btn {
+    display: flex !important;
+  }
 }
 
 @keyframes pulseBeacon {

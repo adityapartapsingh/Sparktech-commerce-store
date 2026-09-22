@@ -63,7 +63,7 @@ export default function Navbar() {
     <header style={{ width: '100%', position: 'sticky', top: 0, zIndex: 1000, background: 'var(--bg-card)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       {/* Main Header Bar (Logo, Search, Actions) */}
       <div style={{ paddingBlock: '0.85rem', borderBottom: '1px solid var(--border)' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'clamp(0.5rem, 2vw, 1.5rem)' }}>
           
           {/* Brand Logo & Tagline */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', textDecoration: 'none', flexShrink: 0 }}>
@@ -92,7 +92,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          <nav className="desktop-only nav-links-desktop">
             {navLinks.map(({ to, label }) => {
               const isHome = to === '/' && location.pathname === '/' && !location.hash;
               const isActive = to === '/' ? isHome : location.pathname.startsWith(to);
@@ -131,7 +131,7 @@ export default function Navbar() {
           </nav>
 
           {/* Central Search Bar (Desktop) */}
-          <div className="desktop-only" style={{ flex: '1 1 340px', maxWidth: '480px' }}>
+          <div className="desktop-only nav-search-desktop">
             <form onSubmit={handleHeaderSearchSubmit} style={{ position: 'relative', width: '100%' }}>
               <input
                 type="text"
@@ -181,7 +181,7 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             {/* Mobile Search Toggle */}
             <button
-              className="btn btn-ghost mobile-only"
+              className="btn btn-ghost mobile-only nav-search-mobile-btn"
               onClick={() => setSearchOpen(true)}
               style={{ padding: '0.45rem' }}
               aria-label="Search"
@@ -487,7 +487,7 @@ export default function Navbar() {
 
             {/* Mobile Hamburger Menu Toggle */}
             <button
-              className="btn btn-ghost mobile-only"
+              className="btn btn-ghost mobile-only nav-hamburger-btn"
               onClick={() => setMenuOpen(!menuOpen)}
               style={{ padding: '0.45rem' }}
               aria-label="Toggle navigation menu"
