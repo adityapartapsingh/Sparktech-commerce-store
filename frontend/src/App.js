@@ -45,6 +45,13 @@ const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage')
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const FaqPage = lazy(() => import('./pages/FaqPage'));
+const ShippingPolicyPage = lazy(() => import('./pages/ShippingPolicyPage'));
+const BillingGstPage = lazy(() => import('./pages/BillingGstPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const CareersPage = lazy(() => import('./pages/CareersPage'));
 
 // Placeholder pages (you can build these out next)
 const NotFoundPage = () => (
@@ -247,6 +254,30 @@ function AppRoutes() {
 
           <Route path="/support" element={
             <AppLayout><PageTransition><SupportPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/contact" element={
+            <AppLayout><PageTransition><SupportPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/about" element={
+            <AppLayout><PageTransition><AboutPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/faq" element={
+            <AppLayout><PageTransition><FaqPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/shipping" element={
+            <AppLayout><PageTransition><ShippingPolicyPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/billing" element={
+            <AppLayout><PageTransition><BillingGstPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/terms" element={
+            <AppLayout><PageTransition><TermsPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/privacy" element={
+            <AppLayout><PageTransition><PrivacyPage /></PageTransition></AppLayout>
+          } />
+          <Route path="/careers" element={
+            <AppLayout><PageTransition><CareersPage /></PageTransition></AppLayout>
           } />
 
           {/* Admin routes */}
