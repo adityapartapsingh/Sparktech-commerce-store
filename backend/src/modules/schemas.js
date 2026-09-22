@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-// ── Cart Schemas ────────────────────────────────────────
+// Cart Schemas
 exports.AddToCartSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
   variantId: z.string().min(1, 'Variant ID is required'),
@@ -13,7 +13,7 @@ exports.UpdateCartSchema = z.object({
   quantity:  z.number().int().min(0, 'Quantity must be 0 or more').max(50, 'Max 50 per item'),
 });
 
-// ── Order Schemas ───────────────────────────────────────
+// Order Schemas
 exports.CancelOrderSchema = z.object({
   reason:  z.string().max(200).optional(),
   comment: z.string().max(500).optional(),
@@ -40,7 +40,7 @@ exports.UpdateDeliverySchema = z.object({
   trackingNumber: z.string().min(1, 'Tracking number is required').max(100),
 });
 
-// ── Payment Schemas ─────────────────────────────────────
+// Payment Schemas
 const ShippingAddressSchema = z.object({
   label:   z.string().max(50).optional().default('Home'),
   line1:   z.string().min(5, 'Street address is required').max(200),
@@ -76,7 +76,7 @@ exports.CODOrderSchema = z.object({
   cartItems:       z.array(CartItemSchema).optional(),
 });
 
-// ── Review Schemas ──────────────────────────────────────
+// Review Schemas
 exports.CreateReviewSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
   rating:    z.number().int().min(1, 'Rating must be 1-5').max(5),
@@ -84,7 +84,7 @@ exports.CreateReviewSchema = z.object({
   comment:   z.string().min(10, 'Review must be at least 10 characters').max(2000),
 });
 
-// ── Category Schemas ────────────────────────────────────
+// Category Schemas
 exports.CreateCategorySchema = z.object({
   name:      z.string().min(2, 'Name must be at least 2 characters').max(100),
   slug:      z.string().max(100).optional(),
@@ -101,7 +101,7 @@ exports.UpdateCategorySchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-// ── Feedback Schema ─────────────────────────────────────
+// Feedback Schema
 exports.FeedbackSchema = z.object({
   type:    z.enum(['complaint', 'suggestion', 'feedback', 'compliment']),
   message: z.string().min(10, 'Message must be at least 10 characters').max(2000),

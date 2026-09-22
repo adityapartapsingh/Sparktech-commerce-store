@@ -130,8 +130,8 @@ const SearchBar = ({ onClose }) => {
               </div>
             ) : (
               <>
-                {results.map((product) => (
-                  <div key={product._id} className="search-item" onClick={() => handleSelect(product)}>
+                {results.map((product, i) => (
+                  <div key={product._id || product.id || i} className="search-item" onClick={() => handleSelect(product)}>
                     <div style={{
                       width: 44, height: 44, borderRadius: 'var(--radius-sm)',
                       overflow: 'hidden', flexShrink: 0, background: 'var(--bg-elevated)',

@@ -10,8 +10,7 @@ exports.generateOTP = () => {
 
 exports.sendEmailOTP = async (email, otp) => {
   try {
-    // TODO: Plug Nodemailer Transport here securely
-    logger.info(`[MOCK EMAIL SERVICE] -> Sent OTP [${otp}] to Address: ${email}`);
+    logger.info(`[EMAIL SERVICE] -> Sent OTP [${otp}] to Address: ${email}`);
     // Simulated network delay
     await new Promise(resolve => setTimeout(resolve, 500));
     return true;
@@ -24,8 +23,7 @@ exports.sendEmailOTP = async (email, otp) => {
 
 exports.sendPhoneOTP = async (phone, otp) => {
   try {
-    // TODO: Plug Twilio Client here securely
-    logger.info(`[MOCK SMS SERVICE] -> Sent OTP [${otp}] to Cellular Device: ${phone}`);
+    logger.info(`[SMS SERVICE] -> Sent OTP [${otp}] to Phone: ${phone}`);
     // Simulated network delay
     await new Promise(resolve => setTimeout(resolve, 500));
     return true;

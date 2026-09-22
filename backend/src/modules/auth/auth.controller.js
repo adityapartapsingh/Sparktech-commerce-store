@@ -33,6 +33,8 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
   redirectUrl.searchParams.set('name', req.user.name);
   redirectUrl.searchParams.set('email', req.user.email);
   redirectUrl.searchParams.set('role', req.user.role);
+  redirectUrl.searchParams.set('phone', req.user.phone || '');
+  redirectUrl.searchParams.set('isProfileComplete', req.user.isProfileComplete ? 'true' : 'false');
 
   res.redirect(redirectUrl.toString());
 });

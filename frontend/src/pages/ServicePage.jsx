@@ -54,7 +54,6 @@ const ServicePage = () => (
       <meta name="description" content="SparkTech offers Custom PCB Assembly, Project Consultation, Bulk Orders, and Warranty Services for engineers, makers, and institutions across India." />
     </Helmet>
 
-    {/* ═══ HERO ═══ */}
     <section style={{ position: 'relative', overflow: 'hidden', paddingTop: '7rem', paddingBottom: '4rem' }}>
       <div className="container" style={{ textAlign: 'center', maxWidth: 720 }}>
         <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
@@ -80,7 +79,6 @@ const ServicePage = () => (
       </div>
     </section>
 
-    {/* ═══ STATS BAR ═══ */}
     <section style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '2rem 0' }}>
       <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1.5rem', textAlign: 'center' }}>
         {STATS.map((s, i) => (
@@ -95,7 +93,6 @@ const ServicePage = () => (
       </div>
     </section>
 
-    {/* ═══ SERVICES ═══ */}
     <section className="section">
       <div className="container">
         <div className="section-header" style={{ textAlign: 'center' }}>
@@ -133,7 +130,6 @@ const ServicePage = () => (
       </div>
     </section>
 
-    {/* ═══ WHO WE SERVE ═══ */}
     <section className="section" style={{ background: 'var(--bg-secondary)' }}>
       <div className="container">
         <div className="section-header" style={{ textAlign: 'center' }}>
@@ -165,7 +161,6 @@ const ServicePage = () => (
       </div>
     </section>
 
-    {/* ═══ CTA ═══ */}
     <section style={{ padding: '4rem 0', borderTop: '1px solid var(--border)' }}>
       <div className="container" style={{ textAlign: 'center', maxWidth: 600 }}>
         <Headphones size={40} color="var(--accent-blue)" style={{ marginBottom: '1rem' }} />

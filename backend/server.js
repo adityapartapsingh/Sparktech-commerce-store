@@ -64,12 +64,12 @@ const startServer = async () => {
 
 startServer();
 
-// Self-ping to keep Render app awake
-// TODO: make the interval configurable via PING_INTERVAL_MS env var
-// TODO: disable this entirely in development (wastes console output)
-const PING_URL = process.env.BACKEND_URL || 'https://sparktech-commerce-store.onrender.com';
-setInterval(() => {
-  axios.get(`${PING_URL}/health`)
-    .then(() => logger.info('Self-ping successful'))
-    .catch((err) => logger.error(`Self-ping failed: ${err.message}`));
-}, 14 * 60 * 1000); // Pings every 14 minutes
+// Keep-alive self-ping for free tier hosting
+if (process.env.NODE_ENV === 'production') {
+  const PING_URL = process.env.BACKEND_URL || 'https://sparktech-commerce-store.onrender.com';
+  setInterval(() => {
+    axios.get(`${PING_URL}/health`)
+      .then(() => logger.info('Keep-alive ping successful'))
+      .catch((err) => logger.error(`Keep-alive ping failed: ${err.message}`));
+  }, 14 * 60 * 1000);
+}

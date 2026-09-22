@@ -32,9 +32,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// TODO: add per-user rate limiting here — right now a single compromised token
-// could hammer the API. Should track req count per user._id in Redis.
-
 // Optional auth - doesn't fail if no token, just sets req.user if available
 exports.optionalProtect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);

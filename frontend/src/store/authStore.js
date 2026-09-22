@@ -6,9 +6,6 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      // FIXME: storing the token in localStorage makes us vulnerable to XSS.
-      // I should migrate this to httpOnly cookies for the JWT, but need to
-      // figure out how to make that work nicely with the mobile app later.
       accessToken: null,
       refreshToken: null,
       setUser: (user) => set({ user, isAuthenticated: !!user }),

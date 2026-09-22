@@ -5,27 +5,29 @@
 =========================== */
 :root,
 [data-theme="dark"] {
-  --bg-primary:     #0B0B12;
-  --bg-secondary:   #101019;
-  --bg-card:        #151520;
-  --bg-elevated:    #1C1C2B;
-  --bg-hover:       #22223A;
+  --bg-primary:     #0B0F17;
+  --bg-secondary:   #0F172A;
+  --bg-card:        #111827;
+  --bg-elevated:    #161F30;
+  --bg-hover:       #1E293B;
 
-  --accent-blue:    #3B82F6;
-  --accent-indigo:  #6366F1;
+  --accent-blue:    #2563EB;
+  --accent-indigo:  #4F46E5;
   --accent-amber:   #F59E0B;
-  --accent-purple:  #8B5CF6;
+  --accent-purple:  #7C3AED;
   --accent-green:   #10B981;
+  --accent-emerald: #10B981;
   --accent-red:     #EF4444;
   --accent-cyan:    #06B6D4;
 
-  --text-primary:   #EEEEF5;
-  --text-secondary: #A0A0BC;
-  --text-muted:     #5C5C78;
+  --text-primary:   #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted:     #64748B;
 
-  --border:         rgba(255,255,255,0.10);
-  --border-hover:   rgba(255,255,255,0.18);
-  --border-accent:  rgba(59,130,246,0.3);
+  --border:         rgba(51, 65, 85, 0.45);
+  --border-hover:   rgba(148, 163, 184, 0.35);
+  --border-accent:  rgba(37, 99, 235, 0.45);
+  --border-emerald: rgba(16, 185, 129, 0.45);
 
   --shadow-sm:  0 1px 2px rgba(0,0,0,0.3);
   --shadow-md:  0 4px 12px rgba(0,0,0,0.25);
@@ -139,13 +141,109 @@ h4 { font-size: 1rem; }
    Layout
 =========================== */
 .container {
+  width: 100%;
   max-width: 1280px;
   margin-inline: auto;
   padding-inline: 1.5rem;
+  box-sizing: border-box;
 }
 .section { padding-block: 4.5rem; }
 .section-sm { padding-block: 2.5rem; }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 3rem;
+  align-items: center;
+}
+@media (max-width: 992px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+}
 .page-wrapper { min-height: 100vh; }
+
+/* Responsive Display Utilities */
+.desktop-only { display: flex; }
+.mobile-only { display: none; }
+
+@media (max-width: 992px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+}
+
+@keyframes pulseBeacon {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* =========================================================================
+   Hero Left Side Modern Typography & Color Combination
+   ========================================================================= */
+.hero-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  margin-bottom: 1rem;
+}
+.status-ping-dot {
+  width: 6px;
+  height: 6px;
+  background: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #10B981;
+  animation: pulseBeacon 1.8s infinite;
+}
+.status-text {
+  color: var(--accent-blue);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.status-mono {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.hero-headline-gradient {
+  background: linear-gradient(135deg, #00F0FF 0%, #2563EB 55%, #10B981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-metrics-strip {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.hero-metric-cell {
+  display: flex;
+  flex-direction: column;
+}
+.hero-metric-number {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.hero-metric-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 
 /* ===========================
    Card
@@ -730,3 +828,106 @@ h4 { font-size: 1rem; }
   .btn { padding: 0.45rem 0.75rem; font-size: 0.8rem; }
   .badge { font-size: 0.65rem; padding: 0.15rem 0.45rem; }
 }
+
+/* ===========================
+   Hardware Telemetry & Obsidian Classes
+=========================== */
+.hardware-panel {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+[data-theme="light"] .hardware-panel {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.badge-telemetry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.badge-telemetry.emerald {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.badge-telemetry.blue {
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #60A5FA;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse-telemetry 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-telemetry {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.cad-crosshair {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0.5;
+  user-select: none;
+  pointer-events: none;
+}
+.cad-crosshair.top-left { top: 8px; left: 8px; }
+.cad-crosshair.top-right { top: 8px; right: 8px; }
+.cad-crosshair.bottom-left { bottom: 8px; left: 8px; }
+.cad-crosshair.bottom-right { bottom: 8px; right: 8px; }
+
+/* Sticky bottom action bar for mobile viewport */
+.sticky-bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-only-bar {
+    display: flex !important;
+  }
+  .pdp-container {
+    padding-bottom: 5.5rem !important;
+  }
+}
+
+

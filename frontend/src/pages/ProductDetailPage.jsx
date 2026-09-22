@@ -11,7 +11,7 @@ import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useWishlist } from '../hooks/useWishlist';
-/* ── Reviews Section ──────────────────────────────────── */
+
 const ReviewsSection = ({ productId, user, queryClient }) => {
 
 
@@ -180,9 +180,6 @@ const ProductDetailPage = () => {
   const { isInWishlist, toggleWishlist, isToggling } = useWishlist();
 
   const [activeImage, setActiveImage] = useState(0);
-  // TODO: this component re-renders 4 times when changing variants.
-  // Need to wrap the variant selector in React.memo() or rethink the state.
-  // It's fine for now, but will lag on older Android phones.
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
@@ -243,6 +240,11 @@ const ProductDetailPage = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    await handleAddToCart();
+    navigate('/cart');
+  };
+
   const images = product.images?.length > 0 ? product.images : [null];
   const stockInfo = selectedVariant
     ? selectedVariant.stock === 0 ? { label: 'Out of Stock', color: 'var(--accent-red)' }
@@ -251,7 +253,7 @@ const ProductDetailPage = () => {
     : null;
 
   return (
-    <div className="container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
+    <div className="container pdp-container" style={{ padding: '2rem 1rem', minHeight: '80vh' }}>
       <Helmet>
         <title>{product.name} | SparkTech</title>
         <meta name="description" content={product.shortDescription || (product.description?.substring(0, 150) + '...')} />
@@ -631,6 +633,37 @@ const ProductDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Thumb-Zone Action Bar (Amazon / Flipkart pattern) */}
+      <div className="sticky-bottom-action-bar mobile-only-bar" style={{ display: 'none' }}>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontFamily: 'JetBrains Mono' }}>
+            {selectedVariant?.stock === 0 ? 'Out of stock' : 'In stock'}
+          </span>
+          <span style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', fontFamily: 'Outfit, sans-serif' }}>
+            ₹{selectedVariant?.price?.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+            onClick={handleAddToCart}
+            disabled={selectedVariant?.stock === 0}
+            className="btn btn-outline"
+            style={{ padding: '0.6rem 0.85rem', fontSize: '0.85rem' }}
+            title="Add to Cart"
+          >
+            <ShoppingCart size={18} />
+          </button>
+          <button
+            onClick={handleBuyNow}
+            disabled={selectedVariant?.stock === 0}
+            className="btn btn-primary"
+            style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', fontWeight: 700 }}
+          >
+            <Zap size={16} /> Buy Now
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

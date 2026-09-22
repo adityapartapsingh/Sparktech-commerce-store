@@ -13,7 +13,6 @@ import { useAuthStore } from '../store/authStore';
 import InvoiceModal from '../components/InvoiceModal';
 import OrderTimeline from '../components/OrderTimeline';
 
-/* ── Cancel Modal ─────────────────────────────────────── */
 const CANCEL_REASONS = [
   'Changed my mind',
   'Found a better price elsewhere',
@@ -85,7 +84,6 @@ const CancelModal = ({ order, onConfirm, onClose, isPending }) => {
   );
 };
 
-/* ── Review Modal ─────────────────────────────────────── */
 const ReviewModal = ({ product, onClose }) => {
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
@@ -168,7 +166,6 @@ const ReviewModal = ({ product, onClose }) => {
   );
 };
 
-/* ── Return Modal (2-step) ────────────────────────────── */
 const REASONS = [
   'Product damaged / defective',
   'Wrong item delivered',
@@ -381,7 +378,6 @@ const ReturnModal = ({ order, onClose }) => {
   );
 };
 
-/* ── Main Page ────────────────────────────────────────── */
 const OrdersPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();

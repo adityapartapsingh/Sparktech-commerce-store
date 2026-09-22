@@ -21,7 +21,7 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
   const shipping = order.totalAmount - subtotal - tax > 0 ? order.totalAmount - subtotal - tax : 0;
   const payMethod = order.paymentInfo?.method === 'cod' ? 'Cash on Delivery' : 'Online / Razorpay';
 
-  /* ── Print (admin only) ── */
+  // Print invoice handler (admin)
   const handlePrint = () => {
     const el = document.getElementById('invoice-printable');
     const w = window.open('', '_blank');
@@ -43,7 +43,7 @@ const InvoiceModal = ({ order, onClose, isAdmin = false }) => {
     w.document.close(); w.focus(); w.print(); w.close();
   };
 
-  /* ── Download PDF (for everyone) ── */
+  // Download invoice as PDF
   const handleDownload = async () => {
     const { default: jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;

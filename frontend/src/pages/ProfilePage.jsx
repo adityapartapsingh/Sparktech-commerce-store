@@ -13,17 +13,17 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 
-/* ── Label Icon Map ──────────────────────────────────── */
 const LABEL_ICONS = {
   Home: Home,
   Work: Building2,
   Other: MapPinned,
 };
 
-/* ── Edit Profile Modal ──────────────────────────────── */
 const EditProfileModal = ({ user, onClose, onSaved }) => {
   const [name, setName] = useState(user.name || '');
   const [phone, setPhone] = useState(user.phone || '');
+  const [accountType, setAccountType] = useState(user.accountType || 'maker');
+  const [gstin, setGstin] = useState(user.gstin || '');
 
   const mutation = useMutation({
     mutationFn: (data) => api.patch('/users/me', data),
@@ -37,7 +37,13 @@ const EditProfileModal = ({ user, onClose, onSaved }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    mutation.mutate({ name, phone });
+    mutation.mutate({
+      name,
+      phone,
+      accountType,
+      gstin: gstin.trim() || undefined,
+      isProfileComplete: true,
+    });
   };
 
   return (
@@ -45,7 +51,7 @@ const EditProfileModal = ({ user, onClose, onSaved }) => {
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 460, boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-elevated)' }}>
-          <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Edit Profile</h2>
+          <h2 style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>Edit Hardware Profile</h2>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
             <X size={16} />
           </button>
@@ -57,10 +63,24 @@ const EditProfileModal = ({ user, onClose, onSaved }) => {
             <input type="text" className="form-input" required minLength={2} maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="Your name" />
           </div>
           <div>
-            <label className="form-label">Phone Number</label>
+            <label className="form-label">Courier Contact Phone Number</label>
             <input type="tel" className="form-input" pattern="\d{10,15}" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit mobile number" />
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Used for order notifications via SMS.</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>Required for live courier dispatch SMS & WhatsApp tracking.</p>
           </div>
+          <div>
+            <label className="form-label">Role & Purchasing Entity</label>
+            <select className="form-input" value={accountType} onChange={e => setAccountType(e.target.value)}>
+              <option value="maker">Independent Maker / Student</option>
+              <option value="lab">Research Lab / Enterprise</option>
+              <option value="business">Hardware Startup / Business</option>
+            </select>
+          </div>
+          {(accountType === 'lab' || accountType === 'business') && (
+            <div>
+              <label className="form-label">Entity GSTIN / Tax ID (Optional for 18% Input Credit)</label>
+              <input type="text" className="form-input" value={gstin} onChange={e => setGstin(e.target.value.toUpperCase())} placeholder="e.g. 29AABCU9603R1ZM" maxLength={15} />
+            </div>
+          )}
           <div>
             <label className="form-label">Email (read-only)</label>
             <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.9rem', color: 'var(--text-muted)', cursor: 'not-allowed' }}>
@@ -79,7 +99,6 @@ const EditProfileModal = ({ user, onClose, onSaved }) => {
   );
 };
 
-/* ── Change Password Modal ───────────────────────────── */
 const ChangePasswordModal = ({ onClose }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -139,7 +158,6 @@ const ChangePasswordModal = ({ onClose }) => {
   );
 };
 
-/* ── Address Form Modal ──────────────────────────────── */
 const LABELS = ['Home', 'Work', 'Other'];
 
 const AddressFormModal = ({ address, onClose, onSaved }) => {
@@ -257,7 +275,6 @@ const AddressFormModal = ({ address, onClose, onSaved }) => {
   );
 };
 
-/* ── Main Profile Page ───────────────────────────────── */
 const ProfilePage = () => {
   const { user, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -364,6 +381,20 @@ const ProfilePage = () => {
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-green)', marginRight: '0.5rem' }} /> Active
                 </div>
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Purchasing Role</label>
+                <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.95rem', textTransform: 'capitalize' }}>
+                  {user.accountType === 'lab' ? 'Research Lab / Enterprise' : user.accountType === 'business' ? 'Hardware Business' : 'Independent Maker / Student'}
+                </div>
+              </div>
+              {user.gstin && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Entity GSTIN</label>
+                  <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.95rem', fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-blue)' }}>
+                    {user.gstin}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -429,12 +460,26 @@ const ProfilePage = () => {
                 <Lock size={20} color="var(--accent-blue)" />
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Security</h3>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                Keep your account secure by using a strong password. You can update your password at any time.
-              </p>
-              <button onClick={() => setPasswordOpen(true)} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
-                Change Password
-              </button>
+              {user.authProvider && user.authProvider !== 'local' ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600, fontSize: '0.95rem' }}>
+                    <Shield size={18} />
+                    <span>Federated OAuth 2.0 Security</span>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                    Your account is securely managed via <strong style={{ color: 'var(--text-primary)', textTransform: 'capitalize' }}>{user.authProvider}</strong>. Single sign-on eliminates password vulnerabilities and credential leaks.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+                    Keep your account secure by using a strong password. You can update your password at any time.
+                  </p>
+                  <button onClick={() => setPasswordOpen(true)} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+                    Change Password
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Account Activity */}

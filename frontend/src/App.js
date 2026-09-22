@@ -9,6 +9,7 @@ import { HelmetProvider } from 'react-helmet-async';
 
 import { queryClient } from './lib/queryClient';
 import { useAuthStore } from './store/authStore';
+import { useCartStore } from './store/cartStore';
 import { useThemeStore } from './store/themeStore';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -16,6 +17,7 @@ import CartDrawer from './features/cart/CartDrawer';
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import FallbackState from './components/ui/FallbackState';
+import HardwareOnboardingModal from './components/auth/HardwareOnboardingModal';
 import './index.css';
 
 // Lazy-loaded pages
@@ -38,8 +40,6 @@ const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const LoginPage    = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
@@ -94,7 +94,7 @@ const PageFallback = () => (
 const AppLayout = ({ children, noLayout }) => (
   <>
     {!noLayout && <Navbar />}
-    <main style={{ minHeight: noLayout ? 'unset' : '80vh', paddingTop: noLayout ? 0 : '72px' }}>{children}</main>
+    <main style={{ minHeight: noLayout ? 'unset' : '80vh', paddingTop: 0 }}>{children}</main>
     {!noLayout && <Footer />}
     <CartDrawer />
   </>
@@ -103,7 +103,20 @@ const AppLayout = ({ children, noLayout }) => (
 function AppRoutes() {
   const location = useLocation();
   const { initTheme } = useThemeStore();
-  const { setUser, setTokens, logout } = useAuthStore();
+  const { user, isAuthenticated, setUser, setTokens, logout } = useAuthStore();
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+  // Trigger onboarding modal if user is authenticated and phone is missing
+  useEffect(() => {
+    if (isAuthenticated && user && (!user.phone || user.isProfileComplete === false)) {
+      const dismissedUntil = sessionStorage.getItem('sparktech_onboarding_dismissed');
+      if (!dismissedUntil || Date.now() > Number(dismissedUntil)) {
+        setShowOnboarding(true);
+      }
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [isAuthenticated, user]);
 
   // Handle URL query parameters for OAuth login flow (Bearer Token fallback for cross-domain OAuth redirects)
   useEffect(() => {
@@ -114,16 +127,28 @@ function AppRoutes() {
     const name = params.get('name');
     const email = params.get('email');
     const role = params.get('role');
+    const phone = params.get('phone');
+    const isProfileComplete = params.get('isProfileComplete');
 
     if (token && refreshToken && id && name && email && role) {
       setTokens({ accessToken: token, refreshToken });
-      setUser({ _id: id, name: decodeURIComponent(name), email: decodeURIComponent(email), role });
+      setUser({
+        _id: id,
+        name: decodeURIComponent(name),
+        email: decodeURIComponent(email),
+        role,
+        phone: phone ? decodeURIComponent(phone) : undefined,
+        isProfileComplete: isProfileComplete === 'true',
+      });
       
       // Clean URL search parameters
       const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
       window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
       
-      toast.success(`Welcome, ${decodeURIComponent(name)}!`);
+      // Sync cart state
+      useCartStore.getState().fetchCart();
+
+      toast.success(`Welcome to SparkTech, ${decodeURIComponent(name)}!`);
     }
   }, [location, setUser, setTokens]);
 
@@ -135,7 +160,7 @@ function AppRoutes() {
     const handleLogout = () => logout();
     window.addEventListener('auth:logout', handleLogout);
 
-    // ── Global JS error + unhandled promise rejection toasts ──
+    // Global JS error and unhandled promise rejection toasts
     const handleUnhandledRejection = (event) => {
       const msg = event.reason?.message || 'An unexpected error occurred';
       // Don't re-toast errors already handled by axios interceptor
@@ -161,7 +186,8 @@ function AppRoutes() {
   }, [logout]);
 
   return (
-    <AnimatePresence mode="wait">
+    <>
+      <AnimatePresence mode="wait">
       <Suspense fallback={<PageFallback />}>
         <Routes location={location} key={location.pathname}>
           {/* Public routes */}
@@ -185,12 +211,8 @@ function AppRoutes() {
           <Route path="/register" element={
             <GuestRoute><AppLayout noLayout><RegisterPage /></AppLayout></GuestRoute>
           } />
-          <Route path="/forgot-password" element={
-            <GuestRoute><AppLayout noLayout><ForgotPasswordPage /></AppLayout></GuestRoute>
-          } />
-          <Route path="/reset-password/:token" element={
-            <GuestRoute><AppLayout noLayout><ResetPasswordPage /></AppLayout></GuestRoute>
-          } />
+          <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
+          <Route path="/reset-password/:token" element={<Navigate to="/login" replace />} />
 
           {/* Protected routes */}
           <Route path="/cart" element={
@@ -265,6 +287,16 @@ function AppRoutes() {
         </Routes>
       </Suspense>
     </AnimatePresence>
+
+    {/* Post-OAuth Hardware Onboarding Modal */}
+    <HardwareOnboardingModal
+      isOpen={showOnboarding}
+      onClose={() => {
+        setShowOnboarding(false);
+        sessionStorage.setItem('sparktech_onboarding_dismissed', String(Date.now() + 86400000));
+      }}
+    />
+  </>
   );
 }
 

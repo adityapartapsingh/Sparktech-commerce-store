@@ -17,7 +17,6 @@ const SORT_OPTIONS = [
 
 const BRANDS = ['Arduino', 'Raspberry Pi', 'Espressif', 'STMicroelectronics', 'Adafruit', 'SparkFun'];
 
-/* ── Sidebar Filters Component ─────────────────────────── */
 const SidebarFilters = ({ categoriesData, category, brand, minPrice, maxPrice, featured, setParam, onClear, isMobile, onClose }) => {
   const Wrapper = isMobile ? 'div' : 'aside';
 
@@ -58,8 +57,8 @@ const SidebarFilters = ({ categoriesData, category, brand, minPrice, maxPrice, f
           <Layers size={14} /> Shop All
         </button>
         
-        {(categoriesData || []).filter(c => !c.parent).map((cat) => (
-          <div key={cat._id}>
+        {(categoriesData || []).filter(c => !c.parent).map((cat, i) => (
+          <div key={cat._id || cat.slug || i}>
             <button onClick={() => { setParam('category', cat.slug); if (isMobile) onClose?.(); }}
               style={{
                 display: 'block', width: '100%', textAlign: 'left', padding: '0.55rem 0.75rem',
@@ -74,8 +73,8 @@ const SidebarFilters = ({ categoriesData, category, brand, minPrice, maxPrice, f
             
             {/* Show subcategories if parent is selected or if we want them always visible */}
             <div style={{ paddingLeft: '1.25rem', marginBottom: 8 }}>
-              {categoriesData.filter(sub => sub.parent?._id === cat._id || sub.parent === cat._id).map(sub => (
-                <button key={sub._id} onClick={() => { setParam('category', sub.slug); if (isMobile) onClose?.(); }}
+              {categoriesData.filter(sub => sub.parent?._id === cat._id || sub.parent === cat._id).map((sub, j) => (
+                <button key={sub._id || sub.slug || j} onClick={() => { setParam('category', sub.slug); if (isMobile) onClose?.(); }}
                   style={{
                     display: 'block', width: '100%', textAlign: 'left', padding: '0.35rem 0.75rem',
                     borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: '0.82rem', marginBottom: 2,
@@ -146,7 +145,6 @@ const SidebarFilters = ({ categoriesData, category, brand, minPrice, maxPrice, f
   );
 };
 
-/* ── Main Page ─────────────────────────────────────────── */
 const ProductListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -275,7 +273,7 @@ const ProductListPage = () => {
               <motion.div layout className="product-grid">
                 <AnimatePresence>
                   {data?.products?.map((product, i) => (
-                    <motion.div key={product._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.03 }}>
+                    <motion.div key={product._id || product.id || i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.03 }}>
                       <ProductCard product={product} />
                     </motion.div>
                   ))}

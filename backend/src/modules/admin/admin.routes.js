@@ -149,10 +149,7 @@ router.get('/logs', protect, authorize('masteradmin'), asyncHandler(async (req, 
   sendSuccess(res, recentLogs, 'System logs streamed successfully');
 }));
 
-// ══════════════════════════════════════════════════════════════
-//  REVIEWS MANAGEMENT
-// ══════════════════════════════════════════════════════════════
-
+// Reviews Management
 // List all reviews (with filters)
 router.get('/reviews', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const page   = Math.max(1, Number(req.query.page) || 1);
@@ -203,10 +200,7 @@ router.delete('/reviews/:id', protect, authorize('admin', 'masteradmin'), asyncH
   sendSuccess(res, {}, 'Review deleted by admin');
 }));
 
-// ══════════════════════════════════════════════════════════════
-//  FEEDBACK MANAGEMENT
-// ══════════════════════════════════════════════════════════════
-
+// Feedback Management
 // List all feedback across products (with filters)
 router.get('/feedback', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const page   = Math.max(1, Number(req.query.page) || 1);
@@ -278,10 +272,7 @@ router.patch('/feedback/:id', protect, authorize('admin', 'masteradmin'), asyncH
   sendSuccess(res, feedback, 'Feedback updated');
 }));
 
-// ══════════════════════════════════════════════════════════════
-//  RETURN / REPLACEMENT REQUEST MANAGEMENT
-// ══════════════════════════════════════════════════════════════
-
+// Return & Replacement Management
 // List all orders that have a return request
 router.get('/returns', protect, authorize('admin', 'masteradmin'), asyncHandler(async (req, res) => {
   const page  = Math.max(1, Number(req.query.page) || 1);

@@ -27,7 +27,7 @@ const getRazorpay = () => {
   return _razorpay;
 };
 
-// ─── Delivery Calc Helper ───────────────────────────────────────────────────
+// Delivery calculation helper
 const calculateDelivery = (subtotal) => {
   const fee = subtotal >= 500 ? 0 : 50;
   const estimatedDelivery = new Date();
@@ -35,8 +35,7 @@ const calculateDelivery = (subtotal) => {
   return { fee, estimatedDelivery };
 };
 
-// ─── Step 1: Create Razorpay Order ──────────────────────────────────────────
-// Frontend calls this first to get an order_id, then opens the Razorpay modal.
+// Create Razorpay Order
 router.post('/create-order', protect, validate(CreateOrderSchema), asyncHandler(async (req, res) => {
   const { shippingAddress, cartItems } = req.body;
   const user = await User.findById(req.user._id).populate('cart.product');
@@ -159,8 +158,7 @@ router.post('/create-order', protect, validate(CreateOrderSchema), asyncHandler(
   }, 'Razorpay order created');
 }));
 
-// ─── Step 2: Verify Payment (called after Razorpay modal success) ─────────────
-// Frontend sends { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+// Verify Payment (called after Razorpay modal success)
 router.post('/verify', protect, validate(VerifyPaymentSchema), asyncHandler(async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
 
@@ -214,8 +212,7 @@ router.post('/verify', protect, validate(VerifyPaymentSchema), asyncHandler(asyn
   sendSuccess(res, { orderId: order._id }, 'Payment verified and order confirmed');
 }));
 
-
-// ─── COD: Place order without online payment ─────────────────────────────────
+// COD: Place order without online payment
 router.post('/cod', protect, validate(CODOrderSchema), asyncHandler(async (req, res) => {
   const { shippingAddress, cartItems } = req.body;
   const user = await User.findById(req.user._id).populate('cart.product');
@@ -295,8 +292,7 @@ router.post('/cod', protect, validate(CODOrderSchema), asyncHandler(async (req, 
   sendSuccess(res, { orderId: order._id }, 'COD order placed successfully', 201);
 }));
 
-// ─── Step 3: Razorpay Webhook ─────────────────────────────────────────────────
-// Razorpay sends webhook events for payment status changes (capture, failed, etc.)
+// Razorpay Webhook
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -341,7 +337,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true });
 });
 
-// ─── Get Razorpay Key for frontend ────────────────────────────────────────────
+// Razorpay Key configuration for client
 router.get('/config', protect, (req, res) => {
   sendSuccess(res, { keyId: process.env.RAZORPAY_KEY_ID }, 'Razorpay config');
 });

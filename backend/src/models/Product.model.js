@@ -63,24 +63,16 @@ const ProductSchema = new mongoose.Schema({
   isFeatured:  { type: Boolean, default: false, index: true },
   isActive:    { type: Boolean, default: true, index: true },
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  // views: { type: Number, default: 0 },
-  // ^ moved view tracking to Redis (INCR per slug) — updating Mongo
-  //   on every page view was killing write performance with 100+ concurrent users
 }, { timestamps: true });
 
 // Indexes for filtering and search
 ProductSchema.index({ category: 1, basePrice: 1 });
 ProductSchema.index({ 'attributes.key': 1, 'attributes.value': 1 });
-// TODO: add text index weights so product name matches rank higher than description
-// Something like: { name: 10, sku: 5, tags: 3, description: 1 }
-// Docs: https://www.mongodb.com/docs/manual/core/index-text/#specify-weights
 ProductSchema.index({ name: 'text', sku: 'text', 'variants.sku': 'text', tags: 'text', description: 'text' });
 ProductSchema.index({ 'variants.sku': 1 });
 ProductSchema.index({ createdAt: -1 });
 
-// Strict Database-Level Validation: Ensure variant SKUs are strictly unique globally
-// NOTE: this runs an extra DB query on every save — acceptable for admin product creation
-// but would be a bottleneck if we ever do bulk CSV imports. Consider a batch-mode flag.
+// Ensure variant SKUs are strictly unique globally
 ProductSchema.pre('validate', async function () {
   if (this.variants && this.variants.length > 0) {
     const skus = this.variants.map((v) => v.sku);

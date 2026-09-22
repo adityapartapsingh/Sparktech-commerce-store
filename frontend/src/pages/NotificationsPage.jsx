@@ -80,7 +80,7 @@ const NotificationsPage = () => {
           <AnimatePresence mode="popLayout">
             {notifications.map((n, idx) => (
               <motion.div
-                key={n._id}
+                key={n._id || idx}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}

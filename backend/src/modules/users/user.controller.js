@@ -45,13 +45,17 @@ exports.getAllCustomers = asyncHandler(async (req, res) => {
   }, 'Customers fetched');
 });
 
-// ── Update Profile (name, phone) ────────────────────────
+// Update Profile (name, phone, accountType, gstin, isProfileComplete)
 exports.updateProfile = asyncHandler(async (req, res) => {
-  const { name, phone } = req.body;
+  const { name, phone, accountType, gstin, isProfileComplete } = req.body;
   const updates = {};
 
   if (name !== undefined) updates.name = name;
   if (phone !== undefined) updates.phone = phone || undefined; // empty string → remove
+  if (accountType !== undefined) updates.accountType = accountType;
+  if (gstin !== undefined) updates.gstin = gstin ? gstin.toUpperCase() : undefined;
+  if (isProfileComplete !== undefined) updates.isProfileComplete = isProfileComplete;
+  else if (phone) updates.isProfileComplete = true;
 
   const user = await User.findByIdAndUpdate(
     req.user._id,
@@ -63,7 +67,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   sendSuccess(res, user, 'Profile updated');
 });
 
-// ── Update Password ───────────────────────────────────────
+// Update Password
 exports.updatePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   
@@ -84,7 +88,7 @@ exports.updatePassword = asyncHandler(async (req, res) => {
   sendSuccess(res, null, 'Password updated successfully');
 });
 
-// ── Add Address ─────────────────────────────────────────
+// Add Address
 exports.addAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
     .select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
@@ -100,7 +104,7 @@ exports.addAddress = asyncHandler(async (req, res) => {
   sendSuccess(res, user, 'Address added', 201);
 });
 
-// ── Update Address ──────────────────────────────────────
+// Update Address
 exports.updateAddress = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
     .select('-password -refreshToken -emailOtp -emailOtpExpires -phoneOtp -phoneOtpExpires -providerId');
@@ -116,7 +120,7 @@ exports.updateAddress = asyncHandler(async (req, res) => {
   sendSuccess(res, user, 'Address updated');
 });
 
-// ── Delete Address ──────────────────────────────────────
+// Delete Address
 exports.deleteAddress = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,

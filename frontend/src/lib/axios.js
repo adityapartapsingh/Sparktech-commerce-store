@@ -18,11 +18,11 @@ export const apiBase = isVercelProd
 
 const api = axios.create({
   baseURL: apiBase,
-  withCredentials: true,  // Still send cookies as fallback
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request Interceptor: Attach Bearer Token ──────────────────────────────
+// Request Interceptor: Attach Bearer Token
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
   if (accessToken) {
@@ -40,23 +40,23 @@ const processQueue = (error) => {
   failedQueue = [];
 };
 
-// ─── Global Response Interceptor ────────────────────────────────────────────
+// Global Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
 
-    // ── 1. Network error (server unreachable / offline) ──
+    // Network error handling (server offline or unreachable)
     if (!error.response) {
       toast.error('Network error — check your connection or the server is down.', {
-        id: 'network-error',  // dedup: only one toast at a time
+        id: 'network-error',
         duration: 5000,
       });
       return Promise.reject(error);
     }
 
-    // ── 2. 401 → attempt silent token refresh, then retry ──
+    // 401 Unauthorized: attempt silent token refresh, then retry
     if (
       status === 401 &&
       !originalRequest._retry &&
@@ -92,7 +92,7 @@ api.interceptors.response.use(
       }
     }
 
-    // ── 3. 429 Rate limit ──
+    // Rate limit handling
     if (status === 429) {
       toast.error('Too many requests — please slow down and try again shortly.', {
         id: 'rate-limit',
@@ -101,14 +101,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ── 4. 5xx Server errors → global toast with API message ──
+    // Server errors (5xx)
     if (status >= 500) {
       const msg = error.response?.data?.message || 'Server error — please try again.';
       toast.error(msg, { id: `server-error-${status}`, duration: 6000 });
       return Promise.reject(error);
     }
 
-    // ── 5. All other 4xx (400, 403, 404…) → let individual pages handle them ──
     return Promise.reject(error);
   }
 );

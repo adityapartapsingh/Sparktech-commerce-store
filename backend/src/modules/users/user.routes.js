@@ -6,10 +6,13 @@ const { authorize } = require('../../middleware/rbac.middleware');
 const validate = require('../../middleware/validate.middleware');
 const { z } = require('zod');
 
-// ── Schemas ─────────────────────────────────────────────
+// Validation Schemas
 const UpdateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   phone: z.string().regex(/^\d{10,15}$/, 'Invalid phone number').optional().or(z.literal('')),
+  accountType: z.enum(['maker', 'student', 'lab', 'business']).optional(),
+  gstin: z.string().max(20).optional().or(z.literal('')),
+  isProfileComplete: z.boolean().optional(),
 });
 
 const UpdatePasswordSchema = z.object({
@@ -28,16 +31,14 @@ const AddressSchema = z.object({
   phone: z.string().regex(/^\d{10,15}$/).optional().or(z.literal('')),
 });
 
-// ── Admin-only: all customers ───────────────────────────
+// Admin routes
 router.get('/', protect, authorize('admin', 'masteradmin'), UserController.getAllCustomers);
 
-// ── Authenticated user: profile update ──────────────────
+// User profile routes
 router.patch('/me', protect, validate(UpdateProfileSchema), UserController.updateProfile);
-
-// ── Authenticated user: password update ─────────────────
 router.patch('/me/password', protect, validate(UpdatePasswordSchema), UserController.updatePassword);
 
-// ── Authenticated user: address CRUD ────────────────────
+// Address routes
 router.post('/me/addresses', protect, validate(AddressSchema), UserController.addAddress);
 router.put('/me/addresses/:addressId', protect, validate(AddressSchema), UserController.updateAddress);
 router.delete('/me/addresses/:addressId', protect, UserController.deleteAddress);

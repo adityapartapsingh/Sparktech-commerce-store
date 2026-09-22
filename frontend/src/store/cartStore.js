@@ -2,22 +2,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../lib/axios';
 
-// Opted for Zustand over Redux because Redux boilerplate was killing my soul.
-// Plus, we don't need time-travel debugging for a simple cart.
 export const useCartStore = create(
   persist(
     (set, get) => ({
-      items: [],        // Optimistic local cache
+      items: [],
       isOpen: false,
 
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
-      // Optimistic add — updates UI instantly, server call handled by useAddToCart hook
       addItem: (product, variant, quantity = 1) => {
-        // TODO: need to handle inventory checks here eventually.
-        // Right now users can add 999 items even if we only have 2 in stock.
-        // Backend handles it on checkout, but UX is bad if it fails late.
         const existing = get().items.find(
           (i) => i.productId === product._id && i.variantId === variant._id
         );

@@ -10,7 +10,6 @@ import InvoiceModal from '../../components/InvoiceModal';
 import OrderTimeline from '../../components/OrderTimeline';
 import { X } from 'lucide-react';
 
-/* ── Dispatch Modal ────────────────────────────────────────── */
 const DispatchModal = ({ order, onClose, onSubmit, isPending }) => {
   const [provider, setProvider] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -59,7 +58,6 @@ const DispatchModal = ({ order, onClose, onSubmit, isPending }) => {
   );
 };
 
-/* ── Order Detail Modal ────────────────────────────────────── */
 const OrderDetailModal = ({ order, onClose }) => {
   if (!order) return null;
   return (

@@ -23,7 +23,6 @@ const checkoutSchema = z.object({
   phone:   z.string().min(10, 'Valid phone number required'),
 });
 
-/* ── Payment Method Card ─────────────────────────────── */
 const PayMethodCard = ({ id, icon: Icon, title, desc, selected, onSelect }) => (
   <button
     type="button"
@@ -53,7 +52,6 @@ const PayMethodCard = ({ id, icon: Icon, title, desc, selected, onSelect }) => (
   </button>
 );
 
-/* ── Saved Address Card ──────────────────────────────── */
 const LABEL_ICONS = { Home, Work: Building2, Other: MapPinned };
 const SavedAddressCard = ({ addr, selected, onSelect }) => {
   const Icon = LABEL_ICONS[addr.label] || MapPinned;
@@ -107,13 +105,9 @@ const CheckoutPage = () => {
     }
   }, [user, selectedAddrId, useCustom]);
 
-  // Fetch Razorpay key + load SDK script
   useEffect(() => {
     api.get('/payments/config').then(res => setRazorpayKey(res.data.data.keyId)).catch(console.error);
     
-    // HACK: Sometimes the Razorpay script doesn't load fast enough on slow 3G.
-    // I added this retry loop, but it's gross. Better solution would be to
-    // preload the script in index.html, but that affects initial paint.
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
@@ -146,7 +140,6 @@ const CheckoutPage = () => {
     };
   };
 
-  /* ── COD Handler ─────────────────────────────────────────── */
   const placeCOD = async (address) => {
     setIsProcessing(true);
     try {
@@ -161,7 +154,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Razorpay Handler ───────────────────────────────────── */
   const placeRazorpay = async (address) => {
     if (!razorpayKey) return toast.error('Payment gateway not ready. Please try again.');
     setIsProcessing(true);
@@ -217,7 +209,6 @@ const CheckoutPage = () => {
     }
   };
 
-  /* ── Main Submit ────────────────────────────────────────── */
   const onSubmit = (formData) => {
     if (items.length === 0) return toast.error('Cart is empty');
     const address = getShippingAddress(formData);
@@ -256,7 +247,6 @@ const CheckoutPage = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '2rem', alignItems: 'start' }}>
 
-        {/* ── Left col ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Shipping Address */}
@@ -366,7 +356,6 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        {/* ── Right col: Order Summary ── */}
         <div style={{ background: 'var(--bg-card)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', position: 'sticky', top: '6rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '1.5rem' }}>Order Summary</h2>
 
