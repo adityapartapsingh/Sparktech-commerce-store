@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 const FeedbackSchema = new mongoose.Schema({
-  user:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  user:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, index: true },
+  guestInfo: {
+    name:  String,
+    email: String,
+    phone: String,
+  },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true }, // optional — general feedback doesn't need a product
   order:   { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
   type:    { type: String, enum: ['complaint', 'suggestion', 'feedback', 'compliment'], required: true },

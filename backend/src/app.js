@@ -99,6 +99,7 @@ const sanitize = (obj) => {
 app.use((req, res, next) => {
   if (req.body) sanitize(req.body);
   if (req.params) sanitize(req.params);
+  if (req.query) sanitize(req.query);
   next();
 });
 

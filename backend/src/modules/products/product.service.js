@@ -13,15 +13,16 @@ const buildFilter = (query) => {
   } else {
     filter.isActive = true;
   }
+  const escapeRegex = (str) => typeof str === 'string' ? str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
   if (query.category) filter.category = query.category;
-  if (query.brand) filter.brand = new RegExp(query.brand, 'i');
+  if (query.brand) filter.brand = new RegExp(escapeRegex(query.brand), 'i');
   if (query.minPrice || query.maxPrice) {
     filter.basePrice = {};
     if (query.minPrice) filter.basePrice.$gte = Number(query.minPrice);
     if (query.maxPrice) filter.basePrice.$lte = Number(query.maxPrice);
   }
-  if (query.search) {
-    const searchRegex = new RegExp(query.search, 'i');
+  if (query.search && typeof query.search === 'string') {
+    const searchRegex = new RegExp(escapeRegex(query.search.trim()), 'i');
     filter.$or = [
       { name: searchRegex },
       { sku: searchRegex },

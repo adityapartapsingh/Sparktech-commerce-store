@@ -5,9 +5,12 @@ exports.findMany = (filter, options) =>
 
 exports.countDocuments = (filter) => Product.countDocuments(filter);
 exports.findOne = (filter) => Product.findOne(filter).populate('category', 'name slug');
-exports.findByIdOrSlug = (id) =>
-  Product.findOne({ $or: [{ slug: id }, { _id: id.match(/^[a-f\d]{24}$/i) ? id : null }] })
+exports.findByIdOrSlug = (id) => {
+  if (!id || typeof id !== 'string') return null;
+  const isObjectId = /^[a-f\d]{24}$/i.test(id);
+  return Product.findOne({ $or: [{ slug: id }, ...(isObjectId ? [{ _id: id }] : [])] })
     .populate('category', 'name slug');
+};
 exports.create = (data) => Product.create(data);
 exports.findByIdAndUpdate = (id, data) => Product.findByIdAndUpdate(id, data, { returnDocument: 'after', runValidators: true });
 exports.findByIdAndDelete = (id) => Product.findByIdAndDelete(id);

@@ -21,7 +21,13 @@ exports.protect = asyncHandler(async (req, res, next) => {
     return next(new AppError('You are not logged in. Please log in to get access.', 401));
   }
 
-  const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+  } catch (err) {
+    return next(new AppError('Invalid or expired authentication token. Please log in again.', 401));
+  }
+
   const currentUser = await User.findById(decoded.id).select('-password -refreshToken');
 
   if (!currentUser) {

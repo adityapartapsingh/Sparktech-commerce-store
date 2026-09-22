@@ -22,8 +22,9 @@ router.get('/my', protect, asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const filter = { user: req.user._id };
-  if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search, 'i');
+  if (req.query.search && typeof req.query.search === 'string') {
+    const escaped = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escaped, 'i');
     filter.$or = [
       { 'items.name': searchRegex },
       { 'items.sku': searchRegex }
@@ -66,8 +67,9 @@ router.get('/', protect, authorize('admin', 'masteradmin'), asyncHandler(async (
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
 
-  if (req.query.search) {
-    const searchRegex = new RegExp(req.query.search, 'i');
+  if (req.query.search && typeof req.query.search === 'string') {
+    const escaped = req.query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escaped, 'i');
     const searchFilter = {
       $or: [
         { _id: mongoose.Types.ObjectId.isValid(req.query.search) ? req.query.search : undefined },
